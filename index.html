@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Checkerboard</title>
+
+<style>
+body {
+    margin: 0;
+    background: #0a1a2f;
+    display: flex;
+    justify-content: center;
+    font-family: Arial, sans-serif;
+}
+
+#container {
+    margin-top: 40px;
+    text-align: center;
+}
+
+button {
+    font-size: 16px;
+    padding: 6px 14px;
+    cursor: pointer;
+}
+
+button.selected {
+    background: #ffd700;
+}
+
+#top-buttons {
+    margin-bottom: 12px;
+}
+
+#color-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+
+.color-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 3px solid #0a1a2f;
+    cursor: pointer;
+}
+
+.color-btn.selected {
+    border-color: white;
+}
+
+#board {
+    display: grid;
+    grid-template-columns: repeat(8, 75px);
+    grid-template-rows: repeat(8, 75px);
+    margin: auto;
+}
+
+.square {
+    width: 75px;
+    height: 75px;
+    border: 1px solid black;
+    position: relative;
+    user-select: none;
+}
+
+.white { background: white; }
+.black { background: #0b3d0b; }
+
+.letter {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: "Comic Sans MS", cursive;
+    font-size: 26px;
+    color: #d81f1f;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.highlight {
+    position: absolute;
+    inset: 0;
+    opacity: 0.45;
+    z-index: 2;
+}
+
+.edit-input {
+    position: absolute;
+    inset: 0;
+    z-index: 5;
+    font-family: "Comic Sans MS", cursive;
+    font-size: 26px;
+    text-align: center;
+    border: none;
+    outline: none;
+    background: transparent;
+    color: #d81f1f;
+}
+</style>
+</head>
+
+<body>
+
+<div id="container">
+
+    <div id="top-buttons">
+        <button onclick="selectPattern('C')" id="btnC">C</button>
+        <button onclick="selectPattern('R')" id="btnR">R</button>
+        <button onclick="selectPattern('T')" id="btnT">T</button>
+    </div>
+
+    <div id="color-row">
+        <button onclick="undoEdits()">Undo</button>
+
+        <div class="color-btn" style="background:#ff9999" onclick="setColor('#ff9999',this)"></div>
+        <div class="color-btn" style="background:#cfa6ff" onclick="setColor('#cfa6ff',this)"></div>
+        <div class="color-btn" style="background:#9fd6ff" onclick="setColor('#9fd6ff',this)"></div>
+        <div class="color-btn selected" style="background:#ffd700" onclick="setColor('#ffd700',this)"></div>
+        <div class="color-btn" style="background:#ffb347" onclick="setColor('#ffb347',this)"></div>
+        <div class="color-btn" style="background:#9be29b" onclick="setColor('#9be29b',this)"></div>
+
+        <button onclick="eraseHighlights()">Erase</button>
+    </div>
+
+    <div id="board"></div>
+</div>
+
+<script>
+const board = document.getElementById("board");
+
+const patterns = {
+    C: Array(8).fill("TCRTCRTC".split("")),
+    R: Array(8).fill("RTCRTCRT".split("")),
+    T: Array(8).fill("CRTCRTCR".split(""))
+};
+
+let currentPattern = "C";
+let editedLetters = {};
+let highlights = {};
+let currentColor = "#ffd700";
+
+let lastClickTime = 0;
+let lastSquare = null;
+const DOUBLE_CLICK_DELAY = 300;
+
+function selectPattern(p) {
+    currentPattern = p;
+    document.querySelectorAll("#top-buttons button").forEach(b => b.classList.remove("selected"));
+    document.getElementById("btn"+p).classList.add("selected");
+    drawLetters();
+}
+
+function setColor(color, el) {
+    currentColor = color;
+    document.querySelectorAll(".color-btn").forEach(c => c.classList.remove("selected"));
+    el.classList.add("selected");
+}
+
+function undoEdits() {
+    editedLetters = {};
+    drawLetters();
+}
+
+function eraseHighlights() {
+    Object.values(highlights).forEach(h => h.remove());
+    highlights = {};
+}
+
+function drawBoard() {
+    board.innerHTML = "";
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const sq = document.createElement("div");
+            sq.className = "square " + ((r+c)%2===0 ? "white":"black");
+            sq.dataset.key = r+","+c;
+
+            sq.addEventListener("click", () => handleClick(sq));
+
+            const letter = document.createElement("div");
+            letter.className = "letter";
+            sq.appendChild(letter);
+
+            board.appendChild(sq);
+        }
+    }
+    drawLetters();
+}
+
+function handleClick(sq) {
+    const now = Date.now();
+    const isDouble =
+        sq === lastSquare &&
+        (now - lastClickTime) < DOUBLE_CLICK_DELAY;
+
+    lastClickTime = now;
+    lastSquare = sq;
+
+    if (isDouble) {
+        editSquare(sq);
+    } else {
+        toggleHighlight(sq);
+    }
+}
+
+function drawLetters() {
+    document.querySelectorAll(".square").forEach(sq => {
+        const key = sq.dataset.key;
+        const [r, c] = key.split(",");
+        sq.querySelector(".letter").textContent =
+            editedLetters[key] ?? patterns[currentPattern][r][c];
+    });
+}
+
+function toggleHighlight(sq) {
+    const key = sq.dataset.key;
+    if (highlights[key]) {
+        highlights[key].remove();
+        delete highlights[key];
+    } else {
+        const h = document.createElement("div");
+        h.className = "highlight";
+        h.style.background = currentColor;
+        sq.appendChild(h);
+        highlights[key] = h;
+    }
+}
+
+function editSquare(sq) {
+    const key = sq.dataset.key;
+
+    if (sq.querySelector(".edit-input")) return;
+
+    const input = document.createElement("input");
+    input.className = "edit-input";
+    input.value = sq.querySelector(".letter").textContent;
+
+    sq.appendChild(input);
+    input.focus();
+    input.select();
+
+    input.addEventListener("keydown", e => {
+        if (e.key === "Enter") {
+            editedLetters[key] = input.value;
+            input.remove();
+            drawLetters();
+        }
+    });
+
+    input.addEventListener("blur", () => {
+        input.remove();
+        drawLetters();
+    });
+}
+
+drawBoard();
+selectPattern("C");
+</script>
+
+</body>
+</html>
