@@ -24,14 +24,56 @@ button {
     cursor: pointer;
 }
 
-button.selected {
-    background: #ffd700;
+/* moved slightly right */
+#top-buttons,
+#color-row {
+    transform: translateX(20px);
 }
 
 #top-buttons {
     margin-bottom: 12px;
 }
 
+/* 🎨 CARTOON C R T BUTTONS */
+#top-buttons button {
+    font-family: "Comic Sans MS", cursive;
+    font-size: 20px;
+    padding: 8px 18px;
+    margin: 0 6px;
+    border-radius: 14px;
+    border: 3px solid #222;
+    background: linear-gradient(#ffffff, #eaeaea);
+    box-shadow: 0 4px 0 #222;
+    transition: all 0.1s ease;
+}
+
+#top-buttons button:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #222;
+}
+
+#top-buttons button.selected {
+    background: linear-gradient(#ffd700, #ffcc00);
+}
+
+/* 🎨 CARTOON UNDO / ERASE */
+#color-row button {
+    font-family: "Comic Sans MS", cursive;
+    font-size: 16px;
+    padding: 8px 16px;
+    border-radius: 14px;
+    border: 3px solid #222;
+    background: linear-gradient(#ffffff, #eaeaea);
+    box-shadow: 0 4px 0 #222;
+    transition: all 0.1s ease;
+}
+
+#color-row button:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #222;
+}
+
+/* ---------- Color row ---------- */
 #color-row {
     display: flex;
     align-items: center;
@@ -40,6 +82,7 @@ button.selected {
     margin-bottom: 12px;
 }
 
+/* ---------- Color buttons ---------- */
 .color-btn {
     width: 36px;
     height: 36px;
@@ -52,11 +95,42 @@ button.selected {
     border-color: white;
 }
 
+/* ---------- Board + labels layout ---------- */
+#board-wrapper {
+    display: grid;
+    grid-template-columns: 45px auto;
+    grid-template-rows: auto 45px;
+    justify-content: center;
+}
+
+/* ---------- Rank labels (left) ---------- */
+#rank-labels {
+    display: grid;
+    grid-template-rows: repeat(8, 75px);
+    color: white;
+    font-family: "Comic Sans MS", cursive;
+    font-size: 22px;
+    align-items: center;
+    justify-items: center;
+}
+
+/* ---------- File labels (bottom) ---------- */
+#file-labels {
+    grid-column: 2;
+    display: grid;
+    grid-template-columns: repeat(8, 75px);
+    color: white;
+    font-family: "Comic Sans MS", cursive;
+    font-size: 22px;
+    align-items: center;
+    justify-items: center;
+}
+
+/* ---------- Board ---------- */
 #board {
     display: grid;
     grid-template-columns: repeat(8, 75px);
     grid-template-rows: repeat(8, 75px);
-    margin: auto;
 }
 
 .square {
@@ -67,9 +141,11 @@ button.selected {
     user-select: none;
 }
 
-.white { background: white; }
-.black { background: #0b3d0b; }
+/* ♟️ Chess.com colors */
+.white { background: #eeeed2; }
+.black { background: #769656; }
 
+/* ---------- Letter ---------- */
 .letter {
     position: absolute;
     inset: 0;
@@ -83,6 +159,7 @@ button.selected {
     z-index: 3;
 }
 
+/* ---------- Highlight ---------- */
 .highlight {
     position: absolute;
     inset: 0;
@@ -90,6 +167,7 @@ button.selected {
     z-index: 2;
 }
 
+/* ---------- Edit input ---------- */
 .edit-input {
     position: absolute;
     inset: 0;
@@ -109,12 +187,14 @@ button.selected {
 
 <div id="container">
 
+    <!-- C R T -->
     <div id="top-buttons">
         <button onclick="selectPattern('C')" id="btnC">C</button>
         <button onclick="selectPattern('R')" id="btnR">R</button>
         <button onclick="selectPattern('T')" id="btnT">T</button>
     </div>
 
+    <!-- Undo / Colors / Erase -->
     <div id="color-row">
         <button onclick="undoEdits()">Undo</button>
 
@@ -128,11 +208,18 @@ button.selected {
         <button onclick="eraseHighlights()">Erase</button>
     </div>
 
-    <div id="board"></div>
+    <!-- Board + labels -->
+    <div id="board-wrapper">
+        <div id="rank-labels"></div>
+        <div id="board"></div>
+        <div id="file-labels"></div>
+    </div>
 </div>
 
 <script>
 const board = document.getElementById("board");
+const rankLabels = document.getElementById("rank-labels");
+const fileLabels = document.getElementById("file-labels");
 
 const patterns = {
     C: Array(8).fill("TCRTCRTC".split("")),
@@ -149,6 +236,20 @@ let lastClickTime = 0;
 let lastSquare = null;
 const DOUBLE_CLICK_DELAY = 300;
 
+/* ---------- Labels ---------- */
+for (let i = 8; i >= 1; i--) {
+    const d = document.createElement("div");
+    d.textContent = i;
+    rankLabels.appendChild(d);
+}
+
+"abcdefgh".split("").forEach(l => {
+    const d = document.createElement("div");
+    d.textContent = l;
+    fileLabels.appendChild(d);
+});
+
+/* ---------- Controls ---------- */
 function selectPattern(p) {
     currentPattern = p;
     document.querySelectorAll("#top-buttons button").forEach(b => b.classList.remove("selected"));
@@ -172,6 +273,7 @@ function eraseHighlights() {
     highlights = {};
 }
 
+/* ---------- Board ---------- */
 function drawBoard() {
     board.innerHTML = "";
     for (let r = 0; r < 8; r++) {
@@ -210,13 +312,13 @@ function handleClick(sq) {
 
 function drawLetters() {
     document.querySelectorAll(".square").forEach(sq => {
-        const key = sq.dataset.key;
-        const [r, c] = key.split(",");
+        const [r, c] = sq.dataset.key.split(",");
         sq.querySelector(".letter").textContent =
-            editedLetters[key] ?? patterns[currentPattern][r][c];
+            editedLetters[sq.dataset.key] ?? patterns[currentPattern][r][c];
     });
 }
 
+/* ---------- Highlight ---------- */
 function toggleHighlight(sq) {
     const key = sq.dataset.key;
     if (highlights[key]) {
@@ -231,11 +333,11 @@ function toggleHighlight(sq) {
     }
 }
 
+/* ---------- Edit ---------- */
 function editSquare(sq) {
-    const key = sq.dataset.key;
-
     if (sq.querySelector(".edit-input")) return;
 
+    const key = sq.dataset.key;
     const input = document.createElement("input");
     input.className = "edit-input";
     input.value = sq.querySelector(".letter").textContent;
