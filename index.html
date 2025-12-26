@@ -144,6 +144,7 @@ button {
     border: 1px solid black;
     position: relative;
     user-select: none;
+    touch-action: manipulation; /* IMPORTANT for mobile double-tap */
 }
 
 /* Chess.com colors */
@@ -193,14 +194,12 @@ button {
 <div id="scale-root">
 <div id="container">
 
-    <!-- C R T -->
     <div id="top-buttons">
         <button onclick="selectPattern('C')" id="btnC">C</button>
         <button onclick="selectPattern('R')" id="btnR">R</button>
         <button onclick="selectPattern('T')" id="btnT">T</button>
     </div>
 
-    <!-- Undo / Colors / Erase -->
     <div id="color-row">
         <button onclick="undoEdits()">Undo</button>
 
@@ -214,7 +213,6 @@ button {
         <button onclick="eraseHighlights()">Erase</button>
     </div>
 
-    <!-- Board + labels -->
     <div id="board-wrapper">
         <div id="rank-labels"></div>
         <div id="board"></div>
@@ -243,6 +241,10 @@ let currentColor = "#ffd700";
 let lastClickTime = 0;
 let lastSquare = null;
 const DOUBLE_CLICK_DELAY = 300;
+
+/* Mobile double-tap tracking */
+let lastTouchTime = 0;
+let lastTouchSquare = null;
 
 /* Labels */
 for (let i = 8; i >= 1; i--) {
@@ -290,7 +292,11 @@ function drawBoard() {
             sq.className = "square " + ((r+c)%2===0 ? "white":"black");
             sq.dataset.key = r+","+c;
 
+            /* Desktop click */
             sq.addEventListener("click", () => handleClick(sq));
+
+            /* Mobile touch */
+            sq.addEventListener("touchstart", e => handleTouch(e, sq), { passive: false });
 
             const letter = document.createElement("div");
             letter.className = "letter";
@@ -309,6 +315,20 @@ function handleClick(sq) {
     lastSquare = sq;
 
     if (isDouble) editSquare(sq);
+    else toggleHighlight(sq);
+}
+
+/* Mobile double-tap */
+function handleTouch(e, sq) {
+    e.preventDefault();
+
+    const now = Date.now();
+    const isDoubleTap = sq === lastTouchSquare && (now - lastTouchTime) < DOUBLE_CLICK_DELAY;
+
+    lastTouchTime = now;
+    lastTouchSquare = sq;
+
+    if (isDoubleTap) editSquare(sq);
     else toggleHighlight(sq);
 }
 
@@ -360,7 +380,7 @@ function editSquare(sq) {
     });
 }
 
-/* Responsive scaling with orientation detection */
+/* Responsive scaling */
 function scaleToScreen() {
     const container = document.getElementById("container");
 
