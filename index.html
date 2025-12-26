@@ -13,28 +13,35 @@ body {
     font-family: Arial, sans-serif;
 }
 
+/* SCALE ROOT */
+#scale-root {
+    display: flex;
+    justify-content: center;
+    width: 100vw;
+}
+
+/* MAIN CONTAINER */
 #container {
     margin-top: 40px;
     text-align: center;
+    transform-origin: top center;
 }
 
 button {
-    font-size: 16px;
-    padding: 6px 14px;
     cursor: pointer;
 }
 
-/* moved slightly right */
+/* Move controls slightly right */
 #top-buttons,
 #color-row {
     transform: translateX(20px);
 }
 
+/* ---------- TOP BUTTONS ---------- */
 #top-buttons {
     margin-bottom: 12px;
 }
 
-/* 🎨 CARTOON C R T BUTTONS */
 #top-buttons button {
     font-family: "Comic Sans MS", cursive;
     font-size: 20px;
@@ -44,7 +51,6 @@ button {
     border: 3px solid #222;
     background: linear-gradient(#ffffff, #eaeaea);
     box-shadow: 0 4px 0 #222;
-    transition: all 0.1s ease;
 }
 
 #top-buttons button:active {
@@ -56,24 +62,7 @@ button {
     background: linear-gradient(#ffd700, #ffcc00);
 }
 
-/* 🎨 CARTOON UNDO / ERASE */
-#color-row button {
-    font-family: "Comic Sans MS", cursive;
-    font-size: 16px;
-    padding: 8px 16px;
-    border-radius: 14px;
-    border: 3px solid #222;
-    background: linear-gradient(#ffffff, #eaeaea);
-    box-shadow: 0 4px 0 #222;
-    transition: all 0.1s ease;
-}
-
-#color-row button:active {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 #222;
-}
-
-/* ---------- Color row ---------- */
+/* ---------- COLOR ROW ---------- */
 #color-row {
     display: flex;
     align-items: center;
@@ -82,7 +71,23 @@ button {
     margin-bottom: 12px;
 }
 
-/* ---------- Color buttons ---------- */
+/* Cartoon Undo / Erase */
+#color-row button {
+    font-family: "Comic Sans MS", cursive;
+    font-size: 16px;
+    padding: 8px 16px;
+    border-radius: 14px;
+    border: 3px solid #222;
+    background: linear-gradient(#ffffff, #eaeaea);
+    box-shadow: 0 4px 0 #222;
+}
+
+#color-row button:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #222;
+}
+
+/* ---------- COLOR BUTTONS ---------- */
 .color-btn {
     width: 36px;
     height: 36px;
@@ -95,7 +100,7 @@ button {
     border-color: white;
 }
 
-/* ---------- Board + labels layout ---------- */
+/* ---------- BOARD + LABELS ---------- */
 #board-wrapper {
     display: grid;
     grid-template-columns: 45px auto;
@@ -103,7 +108,7 @@ button {
     justify-content: center;
 }
 
-/* ---------- Rank labels (left) ---------- */
+/* Rank labels */
 #rank-labels {
     display: grid;
     grid-template-rows: repeat(8, 75px);
@@ -114,7 +119,7 @@ button {
     justify-items: center;
 }
 
-/* ---------- File labels (bottom) ---------- */
+/* File labels */
 #file-labels {
     grid-column: 2;
     display: grid;
@@ -126,7 +131,7 @@ button {
     justify-items: center;
 }
 
-/* ---------- Board ---------- */
+/* ---------- BOARD ---------- */
 #board {
     display: grid;
     grid-template-columns: repeat(8, 75px);
@@ -141,25 +146,25 @@ button {
     user-select: none;
 }
 
-/* ♟️ Chess.com colors */
+/* Chess.com colors */
 .white { background: #eeeed2; }
 .black { background: #769656; }
 
-/* ---------- Letter ---------- */
+/* ---------- LETTER ---------- */
 .letter {
     position: absolute;
     inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-family: "Comic Sans MS", cursive;
+    font-family: "Comic Sans MS", "Segoe Script", "Bradley Hand", cursive;
     font-size: 26px;
     color: #d81f1f;
     pointer-events: none;
     z-index: 3;
 }
 
-/* ---------- Highlight ---------- */
+/* ---------- HIGHLIGHT ---------- */
 .highlight {
     position: absolute;
     inset: 0;
@@ -167,12 +172,12 @@ button {
     z-index: 2;
 }
 
-/* ---------- Edit input ---------- */
+/* ---------- EDIT INPUT ---------- */
 .edit-input {
     position: absolute;
     inset: 0;
     z-index: 5;
-    font-family: "Comic Sans MS", cursive;
+    font-family: "Comic Sans MS", "Segoe Script", "Bradley Hand", cursive;
     font-size: 26px;
     text-align: center;
     border: none;
@@ -185,6 +190,7 @@ button {
 
 <body>
 
+<div id="scale-root">
 <div id="container">
 
     <!-- C R T -->
@@ -214,6 +220,8 @@ button {
         <div id="board"></div>
         <div id="file-labels"></div>
     </div>
+
+</div>
 </div>
 
 <script>
@@ -236,7 +244,7 @@ let lastClickTime = 0;
 let lastSquare = null;
 const DOUBLE_CLICK_DELAY = 300;
 
-/* ---------- Labels ---------- */
+/* Labels */
 for (let i = 8; i >= 1; i--) {
     const d = document.createElement("div");
     d.textContent = i;
@@ -249,7 +257,7 @@ for (let i = 8; i >= 1; i--) {
     fileLabels.appendChild(d);
 });
 
-/* ---------- Controls ---------- */
+/* Controls */
 function selectPattern(p) {
     currentPattern = p;
     document.querySelectorAll("#top-buttons button").forEach(b => b.classList.remove("selected"));
@@ -273,7 +281,7 @@ function eraseHighlights() {
     highlights = {};
 }
 
-/* ---------- Board ---------- */
+/* Board */
 function drawBoard() {
     board.innerHTML = "";
     for (let r = 0; r < 8; r++) {
@@ -296,18 +304,12 @@ function drawBoard() {
 
 function handleClick(sq) {
     const now = Date.now();
-    const isDouble =
-        sq === lastSquare &&
-        (now - lastClickTime) < DOUBLE_CLICK_DELAY;
-
+    const isDouble = sq === lastSquare && (now - lastClickTime) < DOUBLE_CLICK_DELAY;
     lastClickTime = now;
     lastSquare = sq;
 
-    if (isDouble) {
-        editSquare(sq);
-    } else {
-        toggleHighlight(sq);
-    }
+    if (isDouble) editSquare(sq);
+    else toggleHighlight(sq);
 }
 
 function drawLetters() {
@@ -318,7 +320,6 @@ function drawLetters() {
     });
 }
 
-/* ---------- Highlight ---------- */
 function toggleHighlight(sq) {
     const key = sq.dataset.key;
     if (highlights[key]) {
@@ -333,11 +334,10 @@ function toggleHighlight(sq) {
     }
 }
 
-/* ---------- Edit ---------- */
 function editSquare(sq) {
     if (sq.querySelector(".edit-input")) return;
-
     const key = sq.dataset.key;
+
     const input = document.createElement("input");
     input.className = "edit-input";
     input.value = sq.querySelector(".letter").textContent;
@@ -360,8 +360,29 @@ function editSquare(sq) {
     });
 }
 
+/* Responsive scaling with orientation detection */
+function scaleToScreen() {
+    const container = document.getElementById("container");
+
+    const BASE_WIDTH = 800;
+    const BASE_HEIGHT = 900;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    const isPortrait = vh > vw;
+    let scale = isPortrait ? vw / BASE_WIDTH : vh / BASE_HEIGHT;
+    scale = Math.min(scale, 1);
+
+    container.style.transform = `scale(${scale})`;
+}
+
+window.addEventListener("resize", scaleToScreen);
+window.addEventListener("orientationchange", scaleToScreen);
+
 drawBoard();
 selectPattern("C");
+scaleToScreen();
 </script>
 
 </body>
