@@ -226,7 +226,7 @@ button { cursor: pointer; }
 </div>
 
 <script>
-/* 🔥 FIREBASE CONFIG (YOURS) */
+/* 🔥 FIREBASE CONFIG (UNCHANGED) */
 firebase.initializeApp({
     apiKey: "AIzaSyAVK-7BaCNArXkeS5a9u9GPCxws7uQ0bxM",
     authDomain: "realtime-a67ce.firebaseapp.com",
@@ -239,29 +239,28 @@ firebase.initializeApp({
 
 const database = firebase.database();
 
-/* ---------- VISITOR PRESENCE (FIXED) ---------- */
+/* ---------- VISITOR PRESENCE (ONE PER DEVICE) ---------- */
 const visitorsRef = database.ref("visitors");
 const connectedRef = database.ref(".info/connected");
-const visitorRef = visitorsRef.push();
+
+let deviceId = localStorage.getItem("deviceId");
+if (!deviceId) {
+    deviceId = "device_" + Math.random().toString(36).slice(2);
+    localStorage.setItem("deviceId", deviceId);
+}
+
+const deviceRef = visitorsRef.child(deviceId);
 
 connectedRef.on("value", snap => {
     if (snap.val() === true) {
-        visitorRef.set(true);
-        visitorRef.onDisconnect().remove();
+        deviceRef.set(true);
+        deviceRef.onDisconnect().remove();
     }
 });
 
-let visitorCount = 0;
 const visitorCountEl = document.getElementById("visitor-count");
-
-visitorsRef.on("child_added", () => {
-    visitorCount++;
-    visitorCountEl.textContent = visitorCount;
-});
-
-visitorsRef.on("child_removed", () => {
-    visitorCount = Math.max(visitorCount - 1, 0);
-    visitorCountEl.textContent = visitorCount;
+visitorsRef.on("value", snap => {
+    visitorCountEl.textContent = snap.numChildren();
 });
 
 /* ---------- BOARD LOGIC ---------- */
@@ -332,6 +331,9 @@ function drawBoard() {
 
             sq.addEventListener("pointerdown", () => handleTap(sq));
 
+            /* ✅ DESKTOP DOUBLE-CLICK FIX (ONLY ADDITION) */
+            sq.addEventListener("dblclick", () => editSquare(sq));
+
             const letter = document.createElement("div");
             letter.className = "letter";
             sq.appendChild(letter);
@@ -348,8 +350,11 @@ function handleTap(sq) {
     lastTapTime = now;
     lastSquare = sq;
 
-    if (isDouble) editSquare(sq);
-    else toggleHighlight(sq);
+    if (isDouble) {
+        editSquare(sq);
+        return;
+    }
+    toggleHighlight(sq);
 }
 
 function drawLetters() {
