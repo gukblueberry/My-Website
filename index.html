@@ -15,7 +15,6 @@ body {
     display: flex;
     justify-content: center;
     font-family: Arial, sans-serif;
-    touch-action: manipulation;
 }
 
 #scale-root {
@@ -54,6 +53,11 @@ button { cursor: pointer; }
     box-shadow: 0 4px 0 #222;
 }
 
+#top-buttons button:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #222;
+}
+
 #top-buttons button.selected {
     background: linear-gradient(#ffd700, #ffcc00);
 }
@@ -77,11 +81,17 @@ button { cursor: pointer; }
     box-shadow: 0 4px 0 #222;
 }
 
+#color-row button:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #222;
+}
+
 .color-btn {
     width: 36px;
     height: 36px;
     border-radius: 50%;
     border: 3px solid #0a1a2f;
+    cursor: pointer;
 }
 
 .color-btn.selected {
@@ -130,11 +140,13 @@ button { cursor: pointer; }
     border: 1px solid black;
     position: relative;
     user-select: none;
+    touch-action: none; /* 🔑 REQUIRED for mobile double-tap */
 }
 
 .white { background: #eeeed2; }
 .black { background: #769656; }
 
+/* ---------- LETTER ---------- */
 .letter {
     position: absolute;
     inset: 0;
@@ -148,6 +160,7 @@ button { cursor: pointer; }
     z-index: 3;
 }
 
+/* ---------- HIGHLIGHT ---------- */
 .highlight {
     position: absolute;
     inset: 0;
@@ -155,6 +168,7 @@ button { cursor: pointer; }
     z-index: 2;
 }
 
+/* ---------- EDIT INPUT ---------- */
 .edit-input {
     position: absolute;
     inset: 0;
@@ -183,34 +197,38 @@ button { cursor: pointer; }
 <div id="scale-root">
 <div id="container">
 
-<div id="top-buttons">
-    <button id="btnC" onclick="selectPattern('C')">C</button>
-    <button id="btnR" onclick="selectPattern('R')">R</button>
-    <button id="btnT" onclick="selectPattern('T')">T</button>
-</div>
+    <!-- C R T -->
+    <div id="top-buttons">
+        <button onclick="selectPattern('C')" id="btnC">C</button>
+        <button onclick="selectPattern('R')" id="btnR">R</button>
+        <button onclick="selectPattern('T')" id="btnT">T</button>
+    </div>
 
-<div id="color-row">
-    <button onclick="undoEdits()">Undo</button>
+    <!-- Undo / Colors / Erase -->
+    <div id="color-row">
+        <button onclick="undoEdits()">Undo</button>
 
-    <div class="color-btn" style="background:#ff9999" onclick="setColor('#ff9999',this)"></div>
-    <div class="color-btn" style="background:#cfa6ff" onclick="setColor('#cfa6ff',this)"></div>
-    <div class="color-btn" style="background:#9fd6ff" onclick="setColor('#9fd6ff',this)"></div>
-    <div class="color-btn selected" style="background:#ffd700" onclick="setColor('#ffd700',this)"></div>
-    <div class="color-btn" style="background:#ffb347" onclick="setColor('#ffb347',this)"></div>
-    <div class="color-btn" style="background:#9be29b" onclick="setColor('#9be29b',this)"></div>
+        <div class="color-btn" style="background:#ff9999" onclick="setColor('#ff9999',this)"></div>
+        <div class="color-btn" style="background:#cfa6ff" onclick="setColor('#cfa6ff',this)"></div>
+        <div class="color-btn" style="background:#9fd6ff" onclick="setColor('#9fd6ff',this)"></div>
+        <div class="color-btn selected" style="background:#ffd700" onclick="setColor('#ffd700',this)"></div>
+        <div class="color-btn" style="background:#ffb347" onclick="setColor('#ffb347',this)"></div>
+        <div class="color-btn" style="background:#9be29b" onclick="setColor('#9be29b',this)"></div>
 
-    <button onclick="eraseHighlights()">Erase</button>
-</div>
+        <button onclick="eraseHighlights()">Erase</button>
+    </div>
 
-<div id="board-wrapper">
-    <div id="rank-labels"></div>
-    <div id="board"></div>
-    <div id="file-labels"></div>
-</div>
+    <!-- Board -->
+    <div id="board-wrapper">
+        <div id="rank-labels"></div>
+        <div id="board"></div>
+        <div id="file-labels"></div>
+    </div>
 
-<div id="visitors-online">
-    Visitors Online: <span id="visitor-count">0</span>
-</div>
+    <!-- Visitors -->
+    <div id="visitors-online">
+        Visitors Online: <span id="visitor-count">0</span>
+    </div>
 
 </div>
 </div>
@@ -218,12 +236,18 @@ button { cursor: pointer; }
 <script>
 /* 🔥 FIREBASE CONFIG */
 firebase.initializeApp({
-    databaseURL: "https://realtime-a67ce-default-rtdb.firebaseio.com"
+    apiKey: "AIzaSyAVK-7BaCNArXkeS5a9u9GPCxws7uQ0bxM",
+    authDomain: "realtime-a67ce.firebaseapp.com",
+    databaseURL: "https://realtime-a67ce-default-rtdb.firebaseio.com",
+    projectId: "realtime-a67ce",
+    storageBucket: "realtime-a67ce.firebasestorage.app",
+    messagingSenderId: "898508234092",
+    appId: "1:898508234092:web:307173ddc018db44466749"
 });
 
 const database = firebase.database();
 
-/* 🔴 VISITORS */
+/* VISITOR PRESENCE */
 const visitorsRef = database.ref("visitors");
 const connectedRef = database.ref(".info/connected");
 const visitorRef = visitorsRef.push();
@@ -255,18 +279,23 @@ let editedLetters = {};
 let highlights = {};
 let currentColor = "#ffd700";
 
-/* DOUBLE TAP (DESKTOP + MOBILE) */
 let lastTapTime = 0;
 let lastSquare = null;
 const DOUBLE_TAP_DELAY = 350;
 
+/* Labels */
 for (let i = 8; i >= 1; i--) {
-    rankLabels.appendChild(Object.assign(document.createElement("div"), {textContent:i}));
+    const d = document.createElement("div");
+    d.textContent = i;
+    rankLabels.appendChild(d);
 }
 "abcdefgh".split("").forEach(l => {
-    fileLabels.appendChild(Object.assign(document.createElement("div"), {textContent:l}));
+    const d = document.createElement("div");
+    d.textContent = l;
+    fileLabels.appendChild(d);
 });
 
+/* Controls */
 function selectPattern(p) {
     currentPattern = p;
     document.querySelectorAll("#top-buttons button").forEach(b => b.classList.remove("selected"));
@@ -274,9 +303,9 @@ function selectPattern(p) {
     drawLetters();
 }
 
-function setColor(c, el) {
-    currentColor = c;
-    document.querySelectorAll(".color-btn").forEach(b => b.classList.remove("selected"));
+function setColor(color, el) {
+    currentColor = color;
+    document.querySelectorAll(".color-btn").forEach(c => c.classList.remove("selected"));
     el.classList.add("selected");
 }
 
@@ -290,20 +319,24 @@ function eraseHighlights() {
     highlights = {};
 }
 
+/* Board */
 function drawBoard() {
     board.innerHTML = "";
-    for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
-        const sq = document.createElement("div");
-        sq.className = `square ${(r+c)%2===0?'white':'black'}`;
-        sq.dataset.key = `${r},${c}`;
+    for (let r = 0; r < 8; r++) {
+        for (let c = 0; c < 8; c++) {
+            const sq = document.createElement("div");
+            sq.className = "square " + ((r+c)%2===0 ? "white":"black");
+            sq.dataset.key = r+","+c;
 
-        sq.addEventListener("pointerdown", e => handleTap(e, sq));
+            sq.addEventListener("click", e => handleTap(e, sq));
+            sq.addEventListener("touchstart", e => handleTap(e, sq), { passive: false });
 
-        const letter = document.createElement("div");
-        letter.className = "letter";
-        sq.appendChild(letter);
+            const letter = document.createElement("div");
+            letter.className = "letter";
+            sq.appendChild(letter);
 
-        board.appendChild(sq);
+            board.appendChild(sq);
+        }
     }
     drawLetters();
 }
@@ -311,8 +344,7 @@ function drawBoard() {
 function handleTap(e, sq) {
     e.preventDefault();
     const now = Date.now();
-    const isDouble = sq === lastSquare && now - lastTapTime < DOUBLE_TAP_DELAY;
-
+    const isDouble = sq === lastSquare && (now - lastTapTime) < DOUBLE_TAP_DELAY;
     lastTapTime = now;
     lastSquare = sq;
 
@@ -322,10 +354,9 @@ function handleTap(e, sq) {
 
 function drawLetters() {
     document.querySelectorAll(".square").forEach(sq => {
-        const key = sq.dataset.key;
-        const [r,c] = key.split(",");
+        const [r, c] = sq.dataset.key.split(",");
         sq.querySelector(".letter").textContent =
-            editedLetters[key] ?? patterns[currentPattern][r][c];
+            editedLetters[sq.dataset.key] ?? patterns[currentPattern][r][c];
     });
 }
 
@@ -350,9 +381,10 @@ function editSquare(sq) {
     const input = document.createElement("input");
     input.className = "edit-input";
     input.value = sq.querySelector(".letter").textContent;
-    sq.appendChild(input);
 
-    requestAnimationFrame(() => input.focus());
+    sq.appendChild(input);
+    input.focus();
+    input.select();
 
     input.addEventListener("keydown", e => {
         if (e.key === "Enter") {
@@ -363,23 +395,30 @@ function editSquare(sq) {
     });
 
     input.addEventListener("blur", () => {
-        editedLetters[key] = input.value;
         input.remove();
         drawLetters();
     });
 }
 
-/* ---------- AUTO SCALE + ORIENTATION ---------- */
+/* Responsive scaling + orientation */
 function scaleToScreen() {
     const container = document.getElementById("container");
-    const baseW = 800, baseH = 900;
-    const scale = Math.min(window.innerWidth/baseW, window.innerHeight/baseH, 1);
+    const BASE_WIDTH = 800;
+    const BASE_HEIGHT = 900;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const isPortrait = vh > vw;
+    const scale = Math.min(
+        isPortrait ? vw / BASE_WIDTH : vh / BASE_HEIGHT,
+        1
+    );
     container.style.transform = `scale(${scale})`;
 }
 
 window.addEventListener("resize", scaleToScreen);
-window.addEventListener("orientationchange", () => setTimeout(scaleToScreen, 200));
+window.addEventListener("orientationchange", scaleToScreen);
 
+/* Init */
 drawBoard();
 selectPattern("C");
 scaleToScreen();
