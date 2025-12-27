@@ -4,6 +4,10 @@
 <meta charset="UTF-8">
 <title>Checkerboard</title>
 
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
 <style>
 body {
     margin: 0;
@@ -13,23 +17,19 @@ body {
     font-family: Arial, sans-serif;
 }
 
-/* SCALE ROOT */
 #scale-root {
     display: flex;
     justify-content: center;
     width: 100vw;
 }
 
-/* MAIN CONTAINER */
 #container {
     margin-top: 40px;
     text-align: center;
     transform-origin: top center;
 }
 
-button {
-    cursor: pointer;
-}
+button { cursor: pointer; }
 
 /* Move controls slightly right */
 #top-buttons,
@@ -86,7 +86,6 @@ button {
     box-shadow: 0 1px 0 #222;
 }
 
-/* ---------- COLOR BUTTONS ---------- */
 .color-btn {
     width: 36px;
     height: 36px;
@@ -107,7 +106,6 @@ button {
     justify-content: center;
 }
 
-/* Rank labels */
 #rank-labels {
     display: grid;
     grid-template-rows: repeat(8, 75px);
@@ -118,7 +116,6 @@ button {
     justify-items: center;
 }
 
-/* File labels */
 #file-labels {
     grid-column: 2;
     display: grid;
@@ -145,11 +142,9 @@ button {
     user-select: none;
 }
 
-/* Chess.com colors */
 .white { background: #eeeed2; }
 .black { background: #769656; }
 
-/* ---------- LETTER ---------- */
 .letter {
     position: absolute;
     inset: 0;
@@ -163,7 +158,6 @@ button {
     z-index: 3;
 }
 
-/* ---------- HIGHLIGHT ---------- */
 .highlight {
     position: absolute;
     inset: 0;
@@ -171,7 +165,6 @@ button {
     z-index: 2;
 }
 
-/* ---------- EDIT INPUT ---------- */
 .edit-input {
     position: absolute;
     inset: 0;
@@ -187,11 +180,10 @@ button {
 
 /* ---------- VISITORS ---------- */
 #visitors-online {
-    margin-top: 10px;
+    margin-top: 12px;
     color: white;
     font-family: "Comic Sans MS", cursive;
-    font-size: 18px;
-    text-align: center;
+    font-size: 20px;
 }
 </style>
 </head>
@@ -233,35 +225,29 @@ button {
 </div>
 </div>
 
-<!-- 🔥 Firebase SDKs -->
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-
 <script>
-/* 🔥 FIREBASE CONFIG — REPLACE THESE */
-const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "XXXX",
-    appId: "XXXX"
-};
+/* 🔥 FIREBASE CONFIG — YOUR REAL VALUES */
+firebase.initializeApp({
+  apiKey: "AIzaSyAVK-7BaCNArXkeS5a9u9GPCxws7uQ0bxM",
+  authDomain: "realtime-a67ce.firebaseapp.com",
+  databaseURL: "https://realtime-a67ce-default-rtdb.firebaseio.com",
+  projectId: "realtime-a67ce",
+  storageBucket: "realtime-a67ce.firebasestorage.app",
+  messagingSenderId: "898508234092",
+  appId: "1:898508234092:web:307173ddc018db44466749"
+});
 
-firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-/* ---------- VISITOR PRESENCE ---------- */
+/* 🔴 VISITOR PRESENCE — ISOLATED */
 const visitorsRef = database.ref("visitors");
 const connectedRef = database.ref(".info/connected");
-const visitorId = visitorsRef.push().key;
+const visitorRef = visitorsRef.push();
 
 connectedRef.on("value", snap => {
     if (snap.val() === true) {
-        const ref = visitorsRef.child(visitorId);
-        ref.set(true);
-        ref.onDisconnect().remove();
+        visitorRef.set(true);
+        visitorRef.onDisconnect().remove();
     }
 });
 
@@ -269,7 +255,7 @@ visitorsRef.on("value", snap => {
     document.getElementById("visitor-count").textContent = snap.numChildren();
 });
 
-/* ---------- EXISTING BOARD CODE ---------- */
+/* ---------- BOARD LOGIC (UNCHANGED) ---------- */
 const board = document.getElementById("board");
 const rankLabels = document.getElementById("rank-labels");
 const fileLabels = document.getElementById("file-labels");
@@ -289,7 +275,6 @@ let lastClickTime = 0;
 let lastSquare = null;
 const DOUBLE_CLICK_DELAY = 300;
 
-/* Labels */
 for (let i = 8; i >= 1; i--) {
     const d = document.createElement("div");
     d.textContent = i;
@@ -403,25 +388,8 @@ function editSquare(sq) {
     });
 }
 
-/* Responsive scaling */
-function scaleToScreen() {
-    const container = document.getElementById("container");
-    const BASE_WIDTH = 800;
-    const BASE_HEIGHT = 900;
-
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const scale = Math.min(vw / BASE_WIDTH, vh / BASE_HEIGHT, 1);
-
-    container.style.transform = `scale(${scale})`;
-}
-
-window.addEventListener("resize", scaleToScreen);
-window.addEventListener("orientationchange", scaleToScreen);
-
 drawBoard();
 selectPattern("C");
-scaleToScreen();
 </script>
 
 </body>
