@@ -140,13 +140,11 @@ button { cursor: pointer; }
     border: 1px solid black;
     position: relative;
     user-select: none;
-    touch-action: none; /* 🔑 REQUIRED for mobile double-tap */
 }
 
 .white { background: #eeeed2; }
 .black { background: #769656; }
 
-/* ---------- LETTER ---------- */
 .letter {
     position: absolute;
     inset: 0;
@@ -160,7 +158,6 @@ button { cursor: pointer; }
     z-index: 3;
 }
 
-/* ---------- HIGHLIGHT ---------- */
 .highlight {
     position: absolute;
     inset: 0;
@@ -168,7 +165,6 @@ button { cursor: pointer; }
     z-index: 2;
 }
 
-/* ---------- EDIT INPUT ---------- */
 .edit-input {
     position: absolute;
     inset: 0;
@@ -197,14 +193,12 @@ button { cursor: pointer; }
 <div id="scale-root">
 <div id="container">
 
-    <!-- C R T -->
     <div id="top-buttons">
         <button onclick="selectPattern('C')" id="btnC">C</button>
         <button onclick="selectPattern('R')" id="btnR">R</button>
         <button onclick="selectPattern('T')" id="btnT">T</button>
     </div>
 
-    <!-- Undo / Colors / Erase -->
     <div id="color-row">
         <button onclick="undoEdits()">Undo</button>
 
@@ -218,14 +212,12 @@ button { cursor: pointer; }
         <button onclick="eraseHighlights()">Erase</button>
     </div>
 
-    <!-- Board -->
     <div id="board-wrapper">
         <div id="rank-labels"></div>
         <div id="board"></div>
         <div id="file-labels"></div>
     </div>
 
-    <!-- Visitors -->
     <div id="visitors-online">
         Visitors Online: <span id="visitor-count">0</span>
     </div>
@@ -234,7 +226,7 @@ button { cursor: pointer; }
 </div>
 
 <script>
-/* 🔥 FIREBASE CONFIG */
+/* 🔥 FIREBASE CONFIG (YOURS) */
 firebase.initializeApp({
     apiKey: "AIzaSyAVK-7BaCNArXkeS5a9u9GPCxws7uQ0bxM",
     authDomain: "realtime-a67ce.firebaseapp.com",
@@ -247,20 +239,29 @@ firebase.initializeApp({
 
 const database = firebase.database();
 
-/* VISITOR PRESENCE */
+/* ---------- VISITOR PRESENCE (FIXED) ---------- */
 const visitorsRef = database.ref("visitors");
 const connectedRef = database.ref(".info/connected");
 const visitorRef = visitorsRef.push();
 
 connectedRef.on("value", snap => {
-    if (snap.val()) {
+    if (snap.val() === true) {
         visitorRef.set(true);
         visitorRef.onDisconnect().remove();
     }
 });
 
-visitorsRef.on("value", snap => {
-    document.getElementById("visitor-count").textContent = snap.numChildren();
+let visitorCount = 0;
+const visitorCountEl = document.getElementById("visitor-count");
+
+visitorsRef.on("child_added", () => {
+    visitorCount++;
+    visitorCountEl.textContent = visitorCount;
+});
+
+visitorsRef.on("child_removed", () => {
+    visitorCount = Math.max(visitorCount - 1, 0);
+    visitorCountEl.textContent = visitorCount;
 });
 
 /* ---------- BOARD LOGIC ---------- */
@@ -281,7 +282,7 @@ let currentColor = "#ffd700";
 
 let lastTapTime = 0;
 let lastSquare = null;
-const DOUBLE_TAP_DELAY = 350;
+const DOUBLE_DELAY = 350;
 
 /* Labels */
 for (let i = 8; i >= 1; i--) {
@@ -289,6 +290,7 @@ for (let i = 8; i >= 1; i--) {
     d.textContent = i;
     rankLabels.appendChild(d);
 }
+
 "abcdefgh".split("").forEach(l => {
     const d = document.createElement("div");
     d.textContent = l;
@@ -328,8 +330,7 @@ function drawBoard() {
             sq.className = "square " + ((r+c)%2===0 ? "white":"black");
             sq.dataset.key = r+","+c;
 
-            sq.addEventListener("click", e => handleTap(e, sq));
-            sq.addEventListener("touchstart", e => handleTap(e, sq), { passive: false });
+            sq.addEventListener("pointerdown", () => handleTap(sq));
 
             const letter = document.createElement("div");
             letter.className = "letter";
@@ -341,10 +342,9 @@ function drawBoard() {
     drawLetters();
 }
 
-function handleTap(e, sq) {
-    e.preventDefault();
+function handleTap(sq) {
     const now = Date.now();
-    const isDouble = sq === lastSquare && (now - lastTapTime) < DOUBLE_TAP_DELAY;
+    const isDouble = sq === lastSquare && (now - lastTapTime) < DOUBLE_DELAY;
     lastTapTime = now;
     lastSquare = sq;
 
@@ -354,9 +354,10 @@ function handleTap(e, sq) {
 
 function drawLetters() {
     document.querySelectorAll(".square").forEach(sq => {
-        const [r, c] = sq.dataset.key.split(",");
+        const key = sq.dataset.key;
+        const [r, c] = key.split(",");
         sq.querySelector(".letter").textContent =
-            editedLetters[sq.dataset.key] ?? patterns[currentPattern][r][c];
+            editedLetters[key] ?? patterns[currentPattern][r][c];
     });
 }
 
@@ -376,8 +377,8 @@ function toggleHighlight(sq) {
 
 function editSquare(sq) {
     if (sq.querySelector(".edit-input")) return;
-    const key = sq.dataset.key;
 
+    const key = sq.dataset.key;
     const input = document.createElement("input");
     input.className = "edit-input";
     input.value = sq.querySelector(".letter").textContent;
@@ -400,25 +401,18 @@ function editSquare(sq) {
     });
 }
 
-/* Responsive scaling + orientation */
+/* Responsive scale + orientation */
 function scaleToScreen() {
     const container = document.getElementById("container");
-    const BASE_WIDTH = 800;
-    const BASE_HEIGHT = 900;
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-    const isPortrait = vh > vw;
-    const scale = Math.min(
-        isPortrait ? vw / BASE_WIDTH : vh / BASE_HEIGHT,
-        1
-    );
+    const scale = Math.min(vw / 800, vh / 900, 1);
     container.style.transform = `scale(${scale})`;
 }
 
 window.addEventListener("resize", scaleToScreen);
 window.addEventListener("orientationchange", scaleToScreen);
 
-/* Init */
 drawBoard();
 selectPattern("C");
 scaleToScreen();
