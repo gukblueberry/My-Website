@@ -71,7 +71,6 @@ button {
     margin-bottom: 12px;
 }
 
-/* Cartoon Undo / Erase */
 #color-row button {
     font-family: "Comic Sans MS", cursive;
     font-size: 16px;
@@ -144,7 +143,6 @@ button {
     border: 1px solid black;
     position: relative;
     user-select: none;
-    touch-action: manipulation; /* IMPORTANT for mobile double-tap */
 }
 
 /* Chess.com colors */
@@ -186,6 +184,15 @@ button {
     background: transparent;
     color: #d81f1f;
 }
+
+/* ---------- VISITORS ---------- */
+#visitors-online {
+    margin-top: 10px;
+    color: white;
+    font-family: "Comic Sans MS", cursive;
+    font-size: 18px;
+    text-align: center;
+}
 </style>
 </head>
 
@@ -219,10 +226,50 @@ button {
         <div id="file-labels"></div>
     </div>
 
+    <div id="visitors-online">
+        Visitors Online: <span id="visitor-count">0</span>
+    </div>
+
 </div>
 </div>
 
+<!-- 🔥 Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
 <script>
+/* 🔥 FIREBASE CONFIG — REPLACE THESE */
+const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    databaseURL: "https://YOUR_PROJECT.firebaseio.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "XXXX",
+    appId: "XXXX"
+};
+
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+/* ---------- VISITOR PRESENCE ---------- */
+const visitorsRef = database.ref("visitors");
+const connectedRef = database.ref(".info/connected");
+const visitorId = visitorsRef.push().key;
+
+connectedRef.on("value", snap => {
+    if (snap.val() === true) {
+        const ref = visitorsRef.child(visitorId);
+        ref.set(true);
+        ref.onDisconnect().remove();
+    }
+});
+
+visitorsRef.on("value", snap => {
+    document.getElementById("visitor-count").textContent = snap.numChildren();
+});
+
+/* ---------- EXISTING BOARD CODE ---------- */
 const board = document.getElementById("board");
 const rankLabels = document.getElementById("rank-labels");
 const fileLabels = document.getElementById("file-labels");
@@ -242,10 +289,6 @@ let lastClickTime = 0;
 let lastSquare = null;
 const DOUBLE_CLICK_DELAY = 300;
 
-/* Mobile double-tap tracking */
-let lastTouchTime = 0;
-let lastTouchSquare = null;
-
 /* Labels */
 for (let i = 8; i >= 1; i--) {
     const d = document.createElement("div");
@@ -259,7 +302,6 @@ for (let i = 8; i >= 1; i--) {
     fileLabels.appendChild(d);
 });
 
-/* Controls */
 function selectPattern(p) {
     currentPattern = p;
     document.querySelectorAll("#top-buttons button").forEach(b => b.classList.remove("selected"));
@@ -283,7 +325,6 @@ function eraseHighlights() {
     highlights = {};
 }
 
-/* Board */
 function drawBoard() {
     board.innerHTML = "";
     for (let r = 0; r < 8; r++) {
@@ -292,11 +333,7 @@ function drawBoard() {
             sq.className = "square " + ((r+c)%2===0 ? "white":"black");
             sq.dataset.key = r+","+c;
 
-            /* Desktop click */
             sq.addEventListener("click", () => handleClick(sq));
-
-            /* Mobile touch */
-            sq.addEventListener("touchstart", e => handleTouch(e, sq), { passive: false });
 
             const letter = document.createElement("div");
             letter.className = "letter";
@@ -315,20 +352,6 @@ function handleClick(sq) {
     lastSquare = sq;
 
     if (isDouble) editSquare(sq);
-    else toggleHighlight(sq);
-}
-
-/* Mobile double-tap */
-function handleTouch(e, sq) {
-    e.preventDefault();
-
-    const now = Date.now();
-    const isDoubleTap = sq === lastTouchSquare && (now - lastTouchTime) < DOUBLE_CLICK_DELAY;
-
-    lastTouchTime = now;
-    lastTouchSquare = sq;
-
-    if (isDoubleTap) editSquare(sq);
     else toggleHighlight(sq);
 }
 
@@ -383,16 +406,12 @@ function editSquare(sq) {
 /* Responsive scaling */
 function scaleToScreen() {
     const container = document.getElementById("container");
-
     const BASE_WIDTH = 800;
     const BASE_HEIGHT = 900;
 
     const vw = window.innerWidth;
     const vh = window.innerHeight;
-
-    const isPortrait = vh > vw;
-    let scale = isPortrait ? vw / BASE_WIDTH : vh / BASE_HEIGHT;
-    scale = Math.min(scale, 1);
+    const scale = Math.min(vw / BASE_WIDTH, vh / BASE_HEIGHT, 1);
 
     container.style.transform = `scale(${scale})`;
 }
