@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>Checkerboard</title>
 
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
 <!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
@@ -86,10 +88,6 @@ button { cursor: pointer; }
     box-shadow: 0 1px 0 #222;
 }
 
-#undo-btn {
-    transform: translateX(6px);
-}
-
 .color-btn {
     width: 36px;
     height: 36px;
@@ -145,6 +143,7 @@ button { cursor: pointer; }
     border: 1px solid black;
     position: relative;
     user-select: none;
+    touch-action: none; /* 🔒 iOS FIX: prevent retargeting */
 }
 
 .white { background: #eeeed2; }
@@ -184,13 +183,12 @@ button { cursor: pointer; }
 }
 
 /* ---------- VISITORS ---------- */
-/* 👇 tiny hair further right */
 #visitors-online {
     margin-top: 12px;
     color: white;
     font-family: "Comic Sans MS", cursive;
     font-size: 20px;
-    transform: translateX(22px);
+    transform: translateX(28px);
 }
 </style>
 </head>
@@ -200,34 +198,34 @@ button { cursor: pointer; }
 <div id="scale-root">
 <div id="container">
 
-    <div id="top-buttons">
-        <button onclick="selectPattern('C')" id="btnC">C</button>
-        <button onclick="selectPattern('R')" id="btnR">R</button>
-        <button onclick="selectPattern('T')" id="btnT">T</button>
-    </div>
+<div id="top-buttons">
+    <button onclick="selectPattern('C')" id="btnC">C</button>
+    <button onclick="selectPattern('R')" id="btnR">R</button>
+    <button onclick="selectPattern('T')" id="btnT">T</button>
+</div>
 
-    <div id="color-row">
-        <button id="undo-btn" onclick="undoEdits()">Undo</button>
+<div id="color-row">
+    <button onclick="undoEdits()">Undo</button>
 
-        <div class="color-btn" style="background:#ff9999" onclick="setColor('#ff9999',this)"></div>
-        <div class="color-btn" style="background:#cfa6ff" onclick="setColor('#cfa6ff',this)"></div>
-        <div class="color-btn" style="background:#9fd6ff" onclick="setColor('#9fd6ff',this)"></div>
-        <div class="color-btn selected" style="background:#ffd700" onclick="setColor('#ffd700',this)"></div>
-        <div class="color-btn" style="background:#ffb347" onclick="setColor('#ffb347',this)"></div>
-        <div class="color-btn" style="background:#9be29b" onclick="setColor('#9be29b',this)"></div>
+    <div class="color-btn" style="background:#ff9999" onclick="setColor('#ff9999',this)"></div>
+    <div class="color-btn" style="background:#cfa6ff" onclick="setColor('#cfa6ff',this)"></div>
+    <div class="color-btn" style="background:#9fd6ff" onclick="setColor('#9fd6ff',this)"></div>
+    <div class="color-btn selected" style="background:#ffd700" onclick="setColor('#ffd700',this)"></div>
+    <div class="color-btn" style="background:#ffb347" onclick="setColor('#ffb347',this)"></div>
+    <div class="color-btn" style="background:#9be29b" onclick="setColor('#9be29b',this)"></div>
 
-        <button onclick="eraseHighlights()">Erase</button>
-    </div>
+    <button onclick="eraseHighlights()">Erase</button>
+</div>
 
-    <div id="board-wrapper">
-        <div id="rank-labels"></div>
-        <div id="board"></div>
-        <div id="file-labels"></div>
-    </div>
+<div id="board-wrapper">
+    <div id="rank-labels"></div>
+    <div id="board"></div>
+    <div id="file-labels"></div>
+</div>
 
-    <div id="visitors-online">
-        Visitors Online: <span id="visitor-count">0</span>
-    </div>
+<div id="visitors-online">
+    Visitors Online: <span id="visitor-count">0</span>
+</div>
 
 </div>
 </div>
@@ -292,8 +290,9 @@ let editedLetters = {};
 let highlights = {};
 let currentColor = "#ffd700";
 
+/* 🔒 iOS-safe double tap */
 let lastTapTime = 0;
-let lastSquare = null;
+let lockedSquare = null;
 const DOUBLE_DELAY = 350;
 
 /* Labels */
@@ -342,8 +341,7 @@ function drawBoard() {
             sq.className = "square " + ((r+c)%2===0 ? "white":"black");
             sq.dataset.key = r+","+c;
 
-            sq.addEventListener("pointerdown", () => handleTap(sq));
-            sq.addEventListener("dblclick", () => editSquare(sq));
+            sq.addEventListener("pointerdown", e => handleTap(e, sq));
 
             const letter = document.createElement("div");
             letter.className = "letter";
@@ -355,11 +353,15 @@ function drawBoard() {
     drawLetters();
 }
 
-function handleTap(sq) {
+function handleTap(e, sq) {
+    e.preventDefault();
+    e.stopPropagation();
+
     const now = Date.now();
-    const isDouble = sq === lastSquare && (now - lastTapTime) < DOUBLE_DELAY;
+    const isDouble = sq === lockedSquare && (now - lastTapTime) < DOUBLE_DELAY;
+
     lastTapTime = now;
-    lastSquare = sq;
+    lockedSquare = sq;
 
     if (isDouble) {
         editSquare(sq);
@@ -412,6 +414,7 @@ function editSquare(sq) {
     });
 
     input.addEventListener("blur", () => {
+        editedLetters[key] = input.value;
         input.remove();
         drawLetters();
     });
