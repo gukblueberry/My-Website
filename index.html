@@ -86,12 +86,17 @@ button { cursor: pointer; }
     box-shadow: 0 1px 0 #222;
 }
 
+#undo-btn {
+    transform: translateX(6px);
+}
+
 .color-btn {
     width: 36px;
     height: 36px;
     border-radius: 50%;
     border: 3px solid #0a1a2f;
     cursor: pointer;
+    transform: translateX(4px);
 }
 
 .color-btn.selected {
@@ -179,11 +184,13 @@ button { cursor: pointer; }
 }
 
 /* ---------- VISITORS ---------- */
+/* 👇 tiny hair further right */
 #visitors-online {
     margin-top: 12px;
     color: white;
     font-family: "Comic Sans MS", cursive;
     font-size: 20px;
+    transform: translateX(22px);
 }
 </style>
 </head>
@@ -200,7 +207,7 @@ button { cursor: pointer; }
     </div>
 
     <div id="color-row">
-        <button onclick="undoEdits()">Undo</button>
+        <button id="undo-btn" onclick="undoEdits()">Undo</button>
 
         <div class="color-btn" style="background:#ff9999" onclick="setColor('#ff9999',this)"></div>
         <div class="color-btn" style="background:#cfa6ff" onclick="setColor('#cfa6ff',this)"></div>
@@ -226,7 +233,7 @@ button { cursor: pointer; }
 </div>
 
 <script>
-/* 🔥 FIREBASE CONFIG (UNCHANGED) */
+/* 🔥 FIREBASE CONFIG */
 firebase.initializeApp({
     apiKey: "AIzaSyAVK-7BaCNArXkeS5a9u9GPCxws7uQ0bxM",
     authDomain: "realtime-a67ce.firebaseapp.com",
@@ -239,11 +246,10 @@ firebase.initializeApp({
 
 const database = firebase.database();
 
-/* ---------- VISITOR PRESENCE (ONE PER DEVICE — NOT TAB) ---------- */
+/* ---------- VISITOR PRESENCE ---------- */
 const visitorsRef = database.ref("visitors");
 const connectedRef = database.ref(".info/connected");
 
-/* Stable per-device ID */
 let deviceId = localStorage.getItem("deviceId");
 if (!deviceId) {
     deviceId = "device_" + Math.random().toString(36).slice(2);
@@ -253,23 +259,19 @@ if (!deviceId) {
 const deviceRef = visitorsRef.child(deviceId);
 const connectionsRef = deviceRef.child("connections");
 
-/* Each tab = one connection, device counted once */
 connectedRef.on("value", snap => {
     if (snap.val() === true) {
-        const connection = connectionsRef.push(true);
-        connection.onDisconnect().remove();
+        const conn = connectionsRef.push(true);
+        conn.onDisconnect().remove();
     }
 });
 
-/* Count devices with at least one active connection */
 const visitorCountEl = document.getElementById("visitor-count");
 
 visitorsRef.on("value", snap => {
     let count = 0;
-    snap.forEach(deviceSnap => {
-        if (deviceSnap.child("connections").numChildren() > 0) {
-            count++;
-        }
+    snap.forEach(d => {
+        if (d.child("connections").numChildren() > 0) count++;
     });
     visitorCountEl.textContent = count;
 });
@@ -415,7 +417,7 @@ function editSquare(sq) {
     });
 }
 
-/* Responsive scale + orientation */
+/* Responsive scale */
 function scaleToScreen() {
     const container = document.getElementById("container");
     const vw = window.innerWidth;
