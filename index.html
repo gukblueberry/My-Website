@@ -239,10 +239,11 @@ firebase.initializeApp({
 
 const database = firebase.database();
 
-/* ---------- VISITOR PRESENCE (ONE PER DEVICE) ---------- */
+/* ---------- VISITOR PRESENCE (ONE PER DEVICE — NOT TAB) ---------- */
 const visitorsRef = database.ref("visitors");
 const connectedRef = database.ref(".info/connected");
 
+/* Stable per-device ID */
 let deviceId = localStorage.getItem("deviceId");
 if (!deviceId) {
     deviceId = "device_" + Math.random().toString(36).slice(2);
@@ -250,17 +251,27 @@ if (!deviceId) {
 }
 
 const deviceRef = visitorsRef.child(deviceId);
+const connectionsRef = deviceRef.child("connections");
 
+/* Each tab = one connection, device counted once */
 connectedRef.on("value", snap => {
     if (snap.val() === true) {
-        deviceRef.set(true);
-        deviceRef.onDisconnect().remove();
+        const connection = connectionsRef.push(true);
+        connection.onDisconnect().remove();
     }
 });
 
+/* Count devices with at least one active connection */
 const visitorCountEl = document.getElementById("visitor-count");
+
 visitorsRef.on("value", snap => {
-    visitorCountEl.textContent = snap.numChildren();
+    let count = 0;
+    snap.forEach(deviceSnap => {
+        if (deviceSnap.child("connections").numChildren() > 0) {
+            count++;
+        }
+    });
+    visitorCountEl.textContent = count;
 });
 
 /* ---------- BOARD LOGIC ---------- */
@@ -330,8 +341,6 @@ function drawBoard() {
             sq.dataset.key = r+","+c;
 
             sq.addEventListener("pointerdown", () => handleTap(sq));
-
-            /* ✅ DESKTOP DOUBLE-CLICK FIX (ONLY ADDITION) */
             sq.addEventListener("dblclick", () => editSquare(sq));
 
             const letter = document.createElement("div");
