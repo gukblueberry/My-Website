@@ -15,6 +15,7 @@ body {
     display: flex;
     justify-content: center;
     font-family: Arial, sans-serif;
+    touch-action: manipulation;
 }
 
 #scale-root {
@@ -53,11 +54,6 @@ button { cursor: pointer; }
     box-shadow: 0 4px 0 #222;
 }
 
-#top-buttons button:active {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 #222;
-}
-
 #top-buttons button.selected {
     background: linear-gradient(#ffd700, #ffcc00);
 }
@@ -81,17 +77,11 @@ button { cursor: pointer; }
     box-shadow: 0 4px 0 #222;
 }
 
-#color-row button:active {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 #222;
-}
-
 .color-btn {
     width: 36px;
     height: 36px;
     border-radius: 50%;
     border: 3px solid #0a1a2f;
-    cursor: pointer;
 }
 
 .color-btn.selected {
@@ -193,59 +183,53 @@ button { cursor: pointer; }
 <div id="scale-root">
 <div id="container">
 
-    <div id="top-buttons">
-        <button onclick="selectPattern('C')" id="btnC">C</button>
-        <button onclick="selectPattern('R')" id="btnR">R</button>
-        <button onclick="selectPattern('T')" id="btnT">T</button>
-    </div>
+<div id="top-buttons">
+    <button id="btnC" onclick="selectPattern('C')">C</button>
+    <button id="btnR" onclick="selectPattern('R')">R</button>
+    <button id="btnT" onclick="selectPattern('T')">T</button>
+</div>
 
-    <div id="color-row">
-        <button onclick="undoEdits()">Undo</button>
+<div id="color-row">
+    <button onclick="undoEdits()">Undo</button>
 
-        <div class="color-btn" style="background:#ff9999" onclick="setColor('#ff9999',this)"></div>
-        <div class="color-btn" style="background:#cfa6ff" onclick="setColor('#cfa6ff',this)"></div>
-        <div class="color-btn" style="background:#9fd6ff" onclick="setColor('#9fd6ff',this)"></div>
-        <div class="color-btn selected" style="background:#ffd700" onclick="setColor('#ffd700',this)"></div>
-        <div class="color-btn" style="background:#ffb347" onclick="setColor('#ffb347',this)"></div>
-        <div class="color-btn" style="background:#9be29b" onclick="setColor('#9be29b',this)"></div>
+    <div class="color-btn" style="background:#ff9999" onclick="setColor('#ff9999',this)"></div>
+    <div class="color-btn" style="background:#cfa6ff" onclick="setColor('#cfa6ff',this)"></div>
+    <div class="color-btn" style="background:#9fd6ff" onclick="setColor('#9fd6ff',this)"></div>
+    <div class="color-btn selected" style="background:#ffd700" onclick="setColor('#ffd700',this)"></div>
+    <div class="color-btn" style="background:#ffb347" onclick="setColor('#ffb347',this)"></div>
+    <div class="color-btn" style="background:#9be29b" onclick="setColor('#9be29b',this)"></div>
 
-        <button onclick="eraseHighlights()">Erase</button>
-    </div>
+    <button onclick="eraseHighlights()">Erase</button>
+</div>
 
-    <div id="board-wrapper">
-        <div id="rank-labels"></div>
-        <div id="board"></div>
-        <div id="file-labels"></div>
-    </div>
+<div id="board-wrapper">
+    <div id="rank-labels"></div>
+    <div id="board"></div>
+    <div id="file-labels"></div>
+</div>
 
-    <div id="visitors-online">
-        Visitors Online: <span id="visitor-count">0</span>
-    </div>
+<div id="visitors-online">
+    Visitors Online: <span id="visitor-count">0</span>
+</div>
 
 </div>
 </div>
 
 <script>
-/* 🔥 FIREBASE CONFIG — YOUR REAL VALUES */
+/* 🔥 FIREBASE CONFIG */
 firebase.initializeApp({
-  apiKey: "AIzaSyAVK-7BaCNArXkeS5a9u9GPCxws7uQ0bxM",
-  authDomain: "realtime-a67ce.firebaseapp.com",
-  databaseURL: "https://realtime-a67ce-default-rtdb.firebaseio.com",
-  projectId: "realtime-a67ce",
-  storageBucket: "realtime-a67ce.firebasestorage.app",
-  messagingSenderId: "898508234092",
-  appId: "1:898508234092:web:307173ddc018db44466749"
+    databaseURL: "https://realtime-a67ce-default-rtdb.firebaseio.com"
 });
 
 const database = firebase.database();
 
-/* 🔴 VISITOR PRESENCE — ISOLATED */
+/* 🔴 VISITORS */
 const visitorsRef = database.ref("visitors");
 const connectedRef = database.ref(".info/connected");
 const visitorRef = visitorsRef.push();
 
 connectedRef.on("value", snap => {
-    if (snap.val() === true) {
+    if (snap.val()) {
         visitorRef.set(true);
         visitorRef.onDisconnect().remove();
     }
@@ -255,7 +239,7 @@ visitorsRef.on("value", snap => {
     document.getElementById("visitor-count").textContent = snap.numChildren();
 });
 
-/* ---------- BOARD LOGIC (UNCHANGED) ---------- */
+/* ---------- BOARD LOGIC ---------- */
 const board = document.getElementById("board");
 const rankLabels = document.getElementById("rank-labels");
 const fileLabels = document.getElementById("file-labels");
@@ -271,20 +255,16 @@ let editedLetters = {};
 let highlights = {};
 let currentColor = "#ffd700";
 
-let lastClickTime = 0;
+/* DOUBLE TAP (DESKTOP + MOBILE) */
+let lastTapTime = 0;
 let lastSquare = null;
-const DOUBLE_CLICK_DELAY = 300;
+const DOUBLE_TAP_DELAY = 350;
 
 for (let i = 8; i >= 1; i--) {
-    const d = document.createElement("div");
-    d.textContent = i;
-    rankLabels.appendChild(d);
+    rankLabels.appendChild(Object.assign(document.createElement("div"), {textContent:i}));
 }
-
 "abcdefgh".split("").forEach(l => {
-    const d = document.createElement("div");
-    d.textContent = l;
-    fileLabels.appendChild(d);
+    fileLabels.appendChild(Object.assign(document.createElement("div"), {textContent:l}));
 });
 
 function selectPattern(p) {
@@ -294,9 +274,9 @@ function selectPattern(p) {
     drawLetters();
 }
 
-function setColor(color, el) {
-    currentColor = color;
-    document.querySelectorAll(".color-btn").forEach(c => c.classList.remove("selected"));
+function setColor(c, el) {
+    currentColor = c;
+    document.querySelectorAll(".color-btn").forEach(b => b.classList.remove("selected"));
     el.classList.add("selected");
 }
 
@@ -312,28 +292,28 @@ function eraseHighlights() {
 
 function drawBoard() {
     board.innerHTML = "";
-    for (let r = 0; r < 8; r++) {
-        for (let c = 0; c < 8; c++) {
-            const sq = document.createElement("div");
-            sq.className = "square " + ((r+c)%2===0 ? "white":"black");
-            sq.dataset.key = r+","+c;
+    for (let r=0;r<8;r++) for (let c=0;c<8;c++) {
+        const sq = document.createElement("div");
+        sq.className = `square ${(r+c)%2===0?'white':'black'}`;
+        sq.dataset.key = `${r},${c}`;
 
-            sq.addEventListener("click", () => handleClick(sq));
+        sq.addEventListener("pointerdown", e => handleTap(e, sq));
 
-            const letter = document.createElement("div");
-            letter.className = "letter";
-            sq.appendChild(letter);
+        const letter = document.createElement("div");
+        letter.className = "letter";
+        sq.appendChild(letter);
 
-            board.appendChild(sq);
-        }
+        board.appendChild(sq);
     }
     drawLetters();
 }
 
-function handleClick(sq) {
+function handleTap(e, sq) {
+    e.preventDefault();
     const now = Date.now();
-    const isDouble = sq === lastSquare && (now - lastClickTime) < DOUBLE_CLICK_DELAY;
-    lastClickTime = now;
+    const isDouble = sq === lastSquare && now - lastTapTime < DOUBLE_TAP_DELAY;
+
+    lastTapTime = now;
     lastSquare = sq;
 
     if (isDouble) editSquare(sq);
@@ -342,9 +322,10 @@ function handleClick(sq) {
 
 function drawLetters() {
     document.querySelectorAll(".square").forEach(sq => {
-        const [r, c] = sq.dataset.key.split(",");
+        const key = sq.dataset.key;
+        const [r,c] = key.split(",");
         sq.querySelector(".letter").textContent =
-            editedLetters[sq.dataset.key] ?? patterns[currentPattern][r][c];
+            editedLetters[key] ?? patterns[currentPattern][r][c];
     });
 }
 
@@ -369,10 +350,9 @@ function editSquare(sq) {
     const input = document.createElement("input");
     input.className = "edit-input";
     input.value = sq.querySelector(".letter").textContent;
-
     sq.appendChild(input);
-    input.focus();
-    input.select();
+
+    requestAnimationFrame(() => input.focus());
 
     input.addEventListener("keydown", e => {
         if (e.key === "Enter") {
@@ -383,13 +363,26 @@ function editSquare(sq) {
     });
 
     input.addEventListener("blur", () => {
+        editedLetters[key] = input.value;
         input.remove();
         drawLetters();
     });
 }
 
+/* ---------- AUTO SCALE + ORIENTATION ---------- */
+function scaleToScreen() {
+    const container = document.getElementById("container");
+    const baseW = 800, baseH = 900;
+    const scale = Math.min(window.innerWidth/baseW, window.innerHeight/baseH, 1);
+    container.style.transform = `scale(${scale})`;
+}
+
+window.addEventListener("resize", scaleToScreen);
+window.addEventListener("orientationchange", () => setTimeout(scaleToScreen, 200));
+
 drawBoard();
 selectPattern("C");
+scaleToScreen();
 </script>
 
 </body>
