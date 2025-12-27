@@ -143,7 +143,7 @@ button { cursor: pointer; }
     border: 1px solid black;
     position: relative;
     user-select: none;
-    touch-action: none; /* 🔒 iOS FIX: prevent retargeting */
+    touch-action: none;
 }
 
 .white { background: #eeeed2; }
@@ -160,6 +160,11 @@ button { cursor: pointer; }
     color: #d81f1f;
     pointer-events: none;
     z-index: 3;
+}
+
+/* ✅ FIX: hide original letter while editing */
+.square.editing .letter {
+    visibility: hidden;
 }
 
 .highlight {
@@ -290,7 +295,6 @@ let editedLetters = {};
 let highlights = {};
 let currentColor = "#ffd700";
 
-/* 🔒 iOS-safe double tap */
 let lastTapTime = 0;
 let lockedSquare = null;
 const DOUBLE_DELAY = 350;
@@ -396,6 +400,8 @@ function toggleHighlight(sq) {
 function editSquare(sq) {
     if (sq.querySelector(".edit-input")) return;
 
+    sq.classList.add("editing"); // ✅ hide original letter
+
     const key = sq.dataset.key;
     const input = document.createElement("input");
     input.className = "edit-input";
@@ -408,16 +414,20 @@ function editSquare(sq) {
     input.addEventListener("keydown", e => {
         if (e.key === "Enter") {
             editedLetters[key] = input.value;
-            input.remove();
-            drawLetters();
+            cleanupEdit(sq, input);
         }
     });
 
     input.addEventListener("blur", () => {
         editedLetters[key] = input.value;
-        input.remove();
-        drawLetters();
+        cleanupEdit(sq, input);
     });
+}
+
+function cleanupEdit(sq, input) {
+    input.remove();
+    sq.classList.remove("editing"); // ✅ restore letter visibility
+    drawLetters();
 }
 
 /* Responsive scale */
