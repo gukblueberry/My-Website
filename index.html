@@ -33,7 +33,7 @@ body {
 
 button { cursor: pointer; }
 
-/* Move controls slightly right */
+/* Move controls slightly to the right */
 #top-buttons,
 #color-row {
     transform: translateX(20px);
@@ -42,8 +42,50 @@ button { cursor: pointer; }
 /* ---------- TOP BUTTONS ---------- */
 #top-buttons {
     margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
+/* Cartoon-style shape for triangle buttons */
+.triangle-btn {
+    width: 38px;
+    height: 38px;
+    margin-right: 10px;
+    border-radius: 10px;
+    border: 3px solid #222;
+    background: #fff;
+    position: relative;
+    box-shadow: 0 4px 0 #222;
+}
+
+/* Inner triangle drawing */
+.triangle-btn svg {
+    width: 100%;
+    height: 100%;
+}
+
+/* Blue triangle outline */
+#blueTriangle svg polygon {
+    stroke: #0094ff;
+    stroke-width: 4;
+    fill: none;
+}
+
+/* Red broken-corner triangle outline */
+#redTriangle svg polygon {
+    stroke: #ff3b3b;
+    stroke-width: 4;
+    fill: none;
+    stroke-dasharray: 8 4;
+}
+
+/* Highlight selected triangle */
+.triangle-btn.selected {
+    box-shadow: 0 4px 0 #222, 0 0 12px 4px #fff inset;
+}
+
+/* Original top buttons (C, R, T) */
 #top-buttons button {
     font-family: "Comic Sans MS", cursive;
     font-size: 20px;
@@ -162,7 +204,7 @@ button { cursor: pointer; }
     z-index: 3;
 }
 
-/* ✅ FIX: hide original letter while editing */
+/* Hide letter while editing */
 .square.editing .letter {
     visibility: hidden;
 }
@@ -195,15 +237,44 @@ button { cursor: pointer; }
     font-size: 20px;
     transform: translateX(28px);
 }
+
+/* Result display above blue and red triangles */
+#blue-result, #red-result {
+    position: absolute;
+    top: -40px;
+    left: 0;
+    width: 100%;
+    text-align: center;
+    font-family: "Comic Sans MS", cursive;
+    font-size: 22px;
+    color: white;
+}
 </style>
 </head>
 
 <body>
-
 <div id="scale-root">
 <div id="container">
 
 <div id="top-buttons">
+
+    <!-- BLUE TRIANGLE BUTTON -->
+    <div class="triangle-btn" id="blueTriangle" onclick="startTriangleMode('blue')">
+        <svg viewBox="0 0 100 100">
+            <polygon points="10,90 50,10 90,90"/>
+        </svg>
+        <div id="blue-result"></div>
+    </div>
+
+    <!-- RED TRIANGLE BUTTON -->
+    <div class="triangle-btn" id="redTriangle" onclick="startTriangleMode('red')">
+        <svg viewBox="0 0 100 100">
+            <polygon points="10,90 50,10 90,90"/>
+        </svg>
+        <div id="red-result"></div>
+    </div>
+
+    <!-- ORIGINAL BUTTONS STILL HERE -->
     <button onclick="selectPattern('C')" id="btnC">C</button>
     <button onclick="selectPattern('R')" id="btnR">R</button>
     <button onclick="selectPattern('T')" id="btnT">T</button>
@@ -236,7 +307,7 @@ button { cursor: pointer; }
 </div>
 
 <script>
-/* 🔥 FIREBASE CONFIG */
+/* 🔥 Firebase */
 firebase.initializeApp({
     apiKey: "AIzaSyAVK-7BaCNArXkeS5a9u9GPCxws7uQ0bxM",
     authDomain: "realtime-a67ce.firebaseapp.com",
@@ -248,8 +319,6 @@ firebase.initializeApp({
 });
 
 const database = firebase.database();
-
-/* ---------- VISITOR PRESENCE ---------- */
 const visitorsRef = database.ref("visitors");
 const connectedRef = database.ref(".info/connected");
 
@@ -279,7 +348,7 @@ visitorsRef.on("value", snap => {
     visitorCountEl.textContent = count;
 });
 
-/* ---------- BOARD LOGIC ---------- */
+/* ---------- BOARD PATTERNS ---------- */
 const board = document.getElementById("board");
 const rankLabels = document.getElementById("rank-labels");
 const fileLabels = document.getElementById("file-labels");
@@ -299,7 +368,12 @@ let lastTapTime = 0;
 let lockedSquare = null;
 const DOUBLE_DELAY = 350;
 
-/* Labels */
+/* TRIANGLE MODE */
+let triangleMode = false;
+let firstSquare = null;
+let triangleColor = null;
+
+/* ---------- LABEL CREATION ---------- */
 for (let i = 8; i >= 1; i--) {
     const d = document.createElement("div");
     d.textContent = i;
@@ -311,8 +385,7 @@ for (let i = 8; i >= 1; i--) {
     d.textContent = l;
     fileLabels.appendChild(d);
 });
-
-/* Controls */
+/* ---------- CONTROL BUTTON LOGIC ---------- */
 function selectPattern(p) {
     currentPattern = p;
     document.querySelectorAll("#top-buttons button").forEach(b => b.classList.remove("selected"));
@@ -336,7 +409,21 @@ function eraseHighlights() {
     highlights = {};
 }
 
-/* Board */
+/* ---------- TRIANGLE MODE START ---------- */
+function startTriangleMode(which) {
+    triangleMode = true;
+    firstSquare = null;
+    triangleColor = which;
+
+    // Remove selected from both triangles first
+    document.getElementById("blueTriangle").classList.remove("selected");
+    document.getElementById("redTriangle").classList.remove("selected");
+
+    if (which === "blue") document.getElementById("blueTriangle").classList.add("selected");
+    if (which === "red") document.getElementById("redTriangle").classList.add("selected");
+}
+
+/* ---------- BOARD CREATION ---------- */
 function drawBoard() {
     board.innerHTML = "";
     for (let r = 0; r < 8; r++) {
@@ -357,9 +444,24 @@ function drawBoard() {
     drawLetters();
 }
 
+function drawLetters() {
+    document.querySelectorAll(".square").forEach(sq => {
+        const key = sq.dataset.key;
+        const [r, c] = key.split(",");
+        sq.querySelector(".letter").textContent =
+            editedLetters[key] ?? patterns[currentPattern][r][c];
+    });
+}
+
+/* ---------- HANDLE TAP / DOUBLE TAP ---------- */
 function handleTap(e, sq) {
     e.preventDefault();
     e.stopPropagation();
+
+    if (triangleMode) {
+        handleTriangleTap(sq);
+        return;
+    }
 
     const now = Date.now();
     const isDouble = sq === lockedSquare && (now - lastTapTime) < DOUBLE_DELAY;
@@ -374,15 +476,64 @@ function handleTap(e, sq) {
     toggleHighlight(sq);
 }
 
-function drawLetters() {
-    document.querySelectorAll(".square").forEach(sq => {
-        const key = sq.dataset.key;
-        const [r, c] = key.split(",");
-        sq.querySelector(".letter").textContent =
-            editedLetters[key] ?? patterns[currentPattern][r][c];
-    });
+/* ---------- TRIANGLE LOGIC ---------- */
+function handleTriangleTap(sq) {
+    const key = sq.dataset.key;
+    const [r, c] = key.split(",").map(Number);
+
+    if (!firstSquare) {
+        firstSquare = { r, c, key };
+        return;
+    }
+
+    const secondSquare = { r, c };
+    processTriangleCount(firstSquare, secondSquare);
+
+    triangleMode = false;
+    firstSquare = null;
+    // remove highlight after calculation
+    if(triangleColor) {
+        document.getElementById(triangleColor+"Triangle").classList.remove("selected");
+        triangleColor = null;
+    }
 }
 
+function processTriangleCount(first, second) {
+    const resultEl = triangleColor === "blue" ? document.getElementById("blue-result") :
+                     document.getElementById("red-result");
+
+    const letter = editedLetters[first.key] ?? patterns[currentPattern][first.r][first.c];
+
+    // Determine cycle based on starting letter and triangle logic
+    let cycle;
+    if(letter === "C") cycle = ["C","T","R"];
+    else if(letter === "R") cycle = ["T","R","C"];
+    else if(letter === "T") cycle = ["R","C","T"];
+    else cycle = ["C","T","R"];
+
+    let index = cycle.indexOf(letter);
+    let steps = 0;
+
+    if (first.r === second.r) {
+        steps = Math.abs(second.c - first.c);
+    } else if (first.c === second.c) {
+        steps = Math.abs(second.r - first.r);
+    } else {
+        resultEl.textContent = "X";
+        return;
+    }
+
+    for(let i=0; i<steps; i++) {
+        index = (index+1) % 3;
+    }
+
+    const finalLetter = cycle[index];
+
+    // Show letter above triangle and keep it until next calculation
+    resultEl.textContent = finalLetter;
+}
+
+/* ---------- HIGHLIGHT ---------- */
 function toggleHighlight(sq) {
     const key = sq.dataset.key;
     if (highlights[key]) {
@@ -397,22 +548,22 @@ function toggleHighlight(sq) {
     }
 }
 
+/* ---------- EDITING ---------- */
 function editSquare(sq) {
     if (sq.querySelector(".edit-input")) return;
 
-    sq.classList.add("editing"); // ✅ hide original letter
+    sq.classList.add("editing");
 
     const key = sq.dataset.key;
     const input = document.createElement("input");
     input.className = "edit-input";
-    input.value = sq.querySelector(".letter").textContent;
+    input.value = "";
 
     sq.appendChild(input);
     input.focus();
-    input.select();
 
     input.addEventListener("keydown", e => {
-        if (e.key === "Enter") {
+        if(e.key==="Enter") {
             editedLetters[key] = input.value;
             cleanupEdit(sq, input);
         }
@@ -426,11 +577,11 @@ function editSquare(sq) {
 
 function cleanupEdit(sq, input) {
     input.remove();
-    sq.classList.remove("editing"); // ✅ restore letter visibility
+    sq.classList.remove("editing");
     drawLetters();
 }
 
-/* Responsive scale */
+/* ---------- RESPONSIVE SCALE ---------- */
 function scaleToScreen() {
     const container = document.getElementById("container");
     const vw = window.innerWidth;
@@ -442,6 +593,7 @@ function scaleToScreen() {
 window.addEventListener("resize", scaleToScreen);
 window.addEventListener("orientationchange", scaleToScreen);
 
+/* ---------- INITIALIZE ---------- */
 drawBoard();
 selectPattern("C");
 scaleToScreen();
