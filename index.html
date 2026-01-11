@@ -57,6 +57,13 @@ button { cursor: pointer; }
     background: #fff;
     position: relative;
     box-shadow: 0 4px 0 #222;
+    transition: transform 0.1s, border-color 0.2s;
+}
+
+/* Bounce effect */
+.triangle-btn:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #222;
 }
 
 /* Inner triangle drawing */
@@ -80,9 +87,10 @@ button { cursor: pointer; }
     stroke-dasharray: 8 4;
 }
 
-/* Highlight selected triangle */
+/* Highlight selected triangle — border matches triangle color */
 .triangle-btn.selected {
-    box-shadow: 0 4px 0 #222, 0 0 12px 4px #fff inset;
+    border-width: 4px;
+    border-style: solid;
 }
 
 /* Original top buttons (C, R, T) */
@@ -123,6 +131,11 @@ button { cursor: pointer; }
     border: 3px solid #222;
     background: linear-gradient(#ffffff, #eaeaea);
     box-shadow: 0 4px 0 #222;
+}
+
+/* Move Undo slightly to the right */
+#color-row button:first-child {
+    transform: translateX(8px);
 }
 
 #color-row button:active {
@@ -171,7 +184,6 @@ button { cursor: pointer; }
     align-items: center;
     justify-items: center;
 }
-
 /* ---------- BOARD ---------- */
 #board {
     display: grid;
@@ -279,7 +291,6 @@ button { cursor: pointer; }
     <button onclick="selectPattern('R')" id="btnR">R</button>
     <button onclick="selectPattern('T')" id="btnT">T</button>
 </div>
-
 <div id="color-row">
     <button onclick="undoEdits()">Undo</button>
 
@@ -330,7 +341,6 @@ if (!deviceId) {
 
 const deviceRef = visitorsRef.child(deviceId);
 const connectionsRef = deviceRef.child("connections");
-
 connectedRef.on("value", snap => {
     if (snap.val() === true) {
         const conn = connectionsRef.push(true);
@@ -418,9 +428,24 @@ function startTriangleMode(which) {
     // Remove selected from both triangles first
     document.getElementById("blueTriangle").classList.remove("selected");
     document.getElementById("redTriangle").classList.remove("selected");
+    document.getElementById("blueTriangle").style.borderColor = "";
+    document.getElementById("redTriangle").style.borderColor = "";
 
-    if (which === "blue") document.getElementById("blueTriangle").classList.add("selected");
-    if (which === "red") document.getElementById("redTriangle").classList.add("selected");
+    if (which === "blue") {
+        const btn = document.getElementById("blueTriangle");
+        btn.classList.add("selected");
+        btn.style.borderColor = "#0094ff"; // highlight matches triangle color
+    }
+    if (which === "red") {
+        const btn = document.getElementById("redTriangle");
+        btn.classList.add("selected");
+        btn.style.borderColor = "#ff3b3b"; // highlight matches triangle color
+    }
+
+    // Bouncy effect
+    const btn = document.getElementById(which + "Triangle");
+    btn.style.transform = "translateY(3px)";
+    setTimeout(() => btn.style.transform = "translateY(0px)", 150);
 }
 
 /* ---------- BOARD CREATION ---------- */
@@ -483,28 +508,41 @@ function handleTriangleTap(sq) {
 
     if (!firstSquare) {
         firstSquare = { r, c, key };
+        highlightTriangleSquare(sq); // highlight first square in light pink
         return;
     }
 
     const secondSquare = { r, c };
+    highlightTriangleSquare(sq); // highlight second square in light pink
+    highlightTriangleSquare(document.querySelector(`[data-key='${firstSquare.key}']`));
+
     processTriangleCount(firstSquare, secondSquare);
 
     triangleMode = false;
     firstSquare = null;
-    // remove highlight after calculation
-    if(triangleColor) {
-        document.getElementById(triangleColor+"Triangle").classList.remove("selected");
-        triangleColor = null;
-    }
+
+    // Keep highlight on triangle after calculation
+    const triangleEl = document.getElementById(triangleColor + "Triangle");
+    if(triangleEl) triangleEl.classList.add("selected");
 }
 
+/* ---------- HIGHLIGHT TRIANGLE SQUARES ---------- */
+function highlightTriangleSquare(sq) {
+    if (!sq) return;
+    const key = sq.dataset.key;
+    if (highlights[key]) highlights[key].remove();
+    const h = document.createElement("div");
+    h.className = "highlight";
+    h.style.background = "#ffb6c1"; // light pink for triangle highlights
+    sq.appendChild(h);
+    highlights[key] = h;
+}
 function processTriangleCount(first, second) {
     const resultEl = triangleColor === "blue" ? document.getElementById("blue-result") :
                      document.getElementById("red-result");
 
     const letter = editedLetters[first.key] ?? patterns[currentPattern][first.r][first.c];
 
-    // Determine cycle based on starting letter and triangle logic
     let cycle;
     if(letter === "C") cycle = ["C","T","R"];
     else if(letter === "R") cycle = ["T","R","C"];
@@ -528,8 +566,6 @@ function processTriangleCount(first, second) {
     }
 
     const finalLetter = cycle[index];
-
-    // Show letter above triangle and keep it until next calculation
     resultEl.textContent = finalLetter;
 }
 
