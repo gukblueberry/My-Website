@@ -47,6 +47,27 @@ button { cursor: pointer; }
     justify-content: center;
 }
 
+/* Del button style */
+#delButton {
+    width: 32px;
+    height: 32px;
+    margin-right: 8px;
+    border-radius: 10px;
+    border: 3px solid #222;
+    background: #fff;
+    position: relative;
+    box-shadow: 0 4px 0 #222;
+    transition: transform 0.1s, border-color 0.2s;
+    font-weight: bold;
+    font-family: "Comic Sans MS", cursive;
+}
+
+/* Bounce effect for Del */
+#delButton:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #222;
+}
+
 /* Cartoon-style shape for triangle buttons */
 .triangle-btn {
     width: 38px;
@@ -270,6 +291,9 @@ button { cursor: pointer; }
 
 <div id="top-buttons">
 
+    <!-- DEL BUTTON -->
+    <div id="delButton" onclick="eraseTriangleLetters()">Del</div>
+
     <!-- BLUE TRIANGLE BUTTON -->
     <div class="triangle-btn" id="blueTriangle" onclick="startTriangleMode('blue')">
         <svg viewBox="0 0 100 100">
@@ -316,7 +340,6 @@ button { cursor: pointer; }
 
 </div>
 </div>
-
 <script>
 /* 🔥 Firebase */
 firebase.initializeApp({
@@ -419,6 +442,16 @@ function eraseHighlights() {
     highlights = {};
 }
 
+/* ---------- DEL BUTTON FUNCTION ---------- */
+function eraseTriangleLetters() {
+    document.getElementById("blue-result").textContent = "";
+    document.getElementById("red-result").textContent = "";
+
+    const delBtn = document.getElementById("delButton");
+    delBtn.style.transform = "translateY(3px)";
+    setTimeout(() => delBtn.style.transform = "translateY(0px)", 150);
+}
+
 /* ---------- TRIANGLE MODE START ---------- */
 function startTriangleMode(which) {
     triangleMode = true;
@@ -447,7 +480,6 @@ function startTriangleMode(which) {
     btn.style.transform = "translateY(3px)";
     setTimeout(() => btn.style.transform = "translateY(0px)", 150);
 }
-
 /* ---------- BOARD CREATION ---------- */
 function drawBoard() {
     board.innerHTML = "";
@@ -537,6 +569,7 @@ function highlightTriangleSquare(sq) {
     sq.appendChild(h);
     highlights[key] = h;
 }
+
 function processTriangleCount(first, second) {
     const resultEl = triangleColor === "blue" ? document.getElementById("blue-result") :
                      document.getElementById("red-result");
@@ -634,6 +667,5 @@ drawBoard();
 selectPattern("C");
 scaleToScreen();
 </script>
-
 </body>
 </html>
