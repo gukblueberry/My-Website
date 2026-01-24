@@ -31,23 +31,17 @@ body {
     transform-origin: top center;
 }
 
-button { cursor: pointer; }
-
-/* Move controls slightly to the right */
-#top-buttons,
-#color-row {
-    transform: translateX(20px);
-}
+button, div { cursor: pointer; }
 
 /* ---------- TOP BUTTONS ---------- */
 #top-buttons {
-    margin-bottom: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
+    margin-bottom: 12px;
 }
 
-/* Del button style */
+/* DEL button */
 #delButton {
     width: 32px;
     height: 32px;
@@ -55,20 +49,35 @@ button { cursor: pointer; }
     border-radius: 10px;
     border: 3px solid #222;
     background: #fff;
-    position: relative;
     box-shadow: 0 4px 0 #222;
-    transition: transform 0.1s, border-color 0.2s;
     font-weight: bold;
     font-family: "Comic Sans MS", cursive;
+    transition: transform 0.1s;
 }
 
-/* Bounce effect for Del */
 #delButton:active {
     transform: translateY(3px);
     box-shadow: 0 1px 0 #222;
 }
 
-/* Cartoon-style shape for triangle buttons */
+/* SMALL RED CIRCULAR BUTTON */
+#cycleButton {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #ff3b3b;
+    border: 2px solid #ff3b3b;
+    box-shadow: 0 0 12px #ff3b3b;
+    margin-right: 8px;
+    transition: transform 0.1s, box-shadow 0.2s;
+}
+
+#cycleButton:active {
+    transform: scale(0.95);
+    box-shadow: 0 0 8px #ff3b3b;
+}
+
+/* Triangle buttons */
 .triangle-btn {
     width: 38px;
     height: 38px;
@@ -78,29 +87,25 @@ button { cursor: pointer; }
     background: #fff;
     position: relative;
     box-shadow: 0 4px 0 #222;
-    transition: transform 0.1s, border-color 0.2s;
+    transition: transform 0.1s;
 }
 
-/* Bounce effect */
 .triangle-btn:active {
     transform: translateY(3px);
     box-shadow: 0 1px 0 #222;
 }
 
-/* Inner triangle drawing */
 .triangle-btn svg {
     width: 100%;
     height: 100%;
 }
 
-/* Blue triangle outline */
 #blueTriangle svg polygon {
     stroke: #0094ff;
     stroke-width: 4;
     fill: none;
 }
 
-/* Red broken-corner triangle outline */
 #redTriangle svg polygon {
     stroke: #ff3b3b;
     stroke-width: 4;
@@ -108,13 +113,13 @@ button { cursor: pointer; }
     stroke-dasharray: 8 4;
 }
 
-/* Highlight selected triangle — border matches triangle color */
+/* Highlight selected triangle */
 .triangle-btn.selected {
     border-width: 4px;
     border-style: solid;
 }
 
-/* Original top buttons (C, R, T) */
+/* Original pattern buttons */
 #top-buttons button {
     font-family: "Comic Sans MS", cursive;
     font-size: 20px;
@@ -154,23 +159,11 @@ button { cursor: pointer; }
     box-shadow: 0 4px 0 #222;
 }
 
-/* Move Undo slightly to the right */
-#color-row button:first-child {
-    transform: translateX(8px);
-}
-
-#color-row button:active {
-    transform: translateY(3px);
-    box-shadow: 0 1px 0 #222;
-}
-
 .color-btn {
     width: 36px;
     height: 36px;
     border-radius: 50%;
     border: 3px solid #0a1a2f;
-    cursor: pointer;
-    transform: translateX(4px);
 }
 
 .color-btn.selected {
@@ -215,10 +208,11 @@ button { cursor: pointer; }
 .square {
     width: 75px;
     height: 75px;
-    border: 1px solid black;
+    border: 1px solid #222; /* thinner border */
     position: relative;
     user-select: none;
     touch-action: none;
+    box-sizing: border-box;
 }
 
 .white { background: #eeeed2; }
@@ -232,12 +226,11 @@ button { cursor: pointer; }
     justify-content: center;
     font-family: "Comic Sans MS", "Segoe Script", "Bradley Hand", cursive;
     font-size: 26px;
-    color: #d81f1f;
+    color: white; /* restored white letters inside board */
     pointer-events: none;
     z-index: 3;
 }
 
-/* Hide letter while editing */
 .square.editing .letter {
     visibility: hidden;
 }
@@ -259,13 +252,13 @@ button { cursor: pointer; }
     border: none;
     outline: none;
     background: transparent;
-    color: #d81f1f;
+    color: white;
 }
 
-/* ---------- VISITORS ---------- */
+/* ---------- VISITORS ONLINE ---------- */
 #visitors-online {
     margin-top: 12px;
-    color: white;
+    color: white; /* restored white text */
     font-family: "Comic Sans MS", cursive;
     font-size: 20px;
     transform: translateX(28px);
@@ -280,17 +273,15 @@ button { cursor: pointer; }
     text-align: center;
     font-family: "Comic Sans MS", cursive;
     font-size: 22px;
-    color: white;
+    color: white; /* restored white */
 }
 </style>
 </head>
-
 <body>
 <div id="scale-root">
 <div id="container">
 
 <div id="top-buttons">
-
     <!-- DEL BUTTON -->
     <div id="delButton" onclick="eraseTriangleLetters()">Del</div>
 
@@ -310,21 +301,23 @@ button { cursor: pointer; }
         <div id="red-result"></div>
     </div>
 
-    <!-- ORIGINAL BUTTONS STILL HERE -->
+    <!-- SMALL RED CIRCULAR BUTTON -->
+    <div id="cycleButton" onclick="cycleTriangleLetters()"></div>
+
+    <!-- ORIGINAL BUTTONS -->
     <button onclick="selectPattern('C')" id="btnC">C</button>
     <button onclick="selectPattern('R')" id="btnR">R</button>
     <button onclick="selectPattern('T')" id="btnT">T</button>
 </div>
+
 <div id="color-row">
     <button onclick="undoEdits()">Undo</button>
-
     <div class="color-btn" style="background:#ff9999" onclick="setColor('#ff9999',this)"></div>
     <div class="color-btn" style="background:#cfa6ff" onclick="setColor('#cfa6ff',this)"></div>
     <div class="color-btn" style="background:#9fd6ff" onclick="setColor('#9fd6ff',this)"></div>
     <div class="color-btn selected" style="background:#ffd700" onclick="setColor('#ffd700',this)"></div>
     <div class="color-btn" style="background:#ffb347" onclick="setColor('#ffb347',this)"></div>
     <div class="color-btn" style="background:#9be29b" onclick="setColor('#9be29b',this)"></div>
-
     <button onclick="eraseHighlights()">Erase</button>
 </div>
 
@@ -336,9 +329,6 @@ button { cursor: pointer; }
 
 <div id="visitors-online">
     Visitors Online: <span id="visitor-count">0</span>
-</div>
-
-</div>
 </div>
 <script>
 /* 🔥 Firebase */
@@ -372,7 +362,6 @@ connectedRef.on("value", snap => {
 });
 
 const visitorCountEl = document.getElementById("visitor-count");
-
 visitorsRef.on("value", snap => {
     let count = 0;
     snap.forEach(d => {
@@ -410,14 +399,17 @@ let triangleColor = null;
 for (let i = 8; i >= 1; i--) {
     const d = document.createElement("div");
     d.textContent = i;
+    d.style.color = "white";
     rankLabels.appendChild(d);
 }
 
 "abcdefgh".split("").forEach(l => {
     const d = document.createElement("div");
     d.textContent = l;
+    d.style.color = "white";
     fileLabels.appendChild(d);
 });
+
 /* ---------- CONTROL BUTTON LOGIC ---------- */
 function selectPattern(p) {
     currentPattern = p;
@@ -452,13 +444,37 @@ function eraseTriangleLetters() {
     setTimeout(() => delBtn.style.transform = "translateY(0px)", 150);
 }
 
+/* ---------- SMALL RED BUTTON FUNCTION ---------- */
+function cycleTriangleLetters() {
+    const blueEl = document.getElementById("blue-result");
+    const redEl = document.getElementById("red-result");
+
+    const sequence = ["C","R","T"];
+    let blueLetter = blueEl.textContent || "C";
+    let redLetter = redEl.textContent || "C";
+
+    // Blue goes back 2
+    let blueIndex = sequence.indexOf(blueLetter);
+    blueIndex = (blueIndex - 2 + 3) % 3;
+    blueEl.textContent = sequence[blueIndex];
+
+    // Red goes forward 5
+    let redIndex = sequence.indexOf(redLetter);
+    redIndex = (redIndex + 5) % 3;
+    redEl.textContent = sequence[redIndex];
+
+    // Bouncy effect
+    const btn = document.getElementById("cycleButton");
+    btn.style.transform = "scale(0.95)";
+    setTimeout(() => btn.style.transform = "scale(1)", 150);
+}
+
 /* ---------- TRIANGLE MODE START ---------- */
 function startTriangleMode(which) {
     triangleMode = true;
     firstSquare = null;
     triangleColor = which;
 
-    // Remove selected from both triangles first
     document.getElementById("blueTriangle").classList.remove("selected");
     document.getElementById("redTriangle").classList.remove("selected");
     document.getElementById("blueTriangle").style.borderColor = "";
@@ -467,15 +483,14 @@ function startTriangleMode(which) {
     if (which === "blue") {
         const btn = document.getElementById("blueTriangle");
         btn.classList.add("selected");
-        btn.style.borderColor = "#0094ff"; // highlight matches triangle color
+        btn.style.borderColor = "#0094ff";
     }
     if (which === "red") {
         const btn = document.getElementById("redTriangle");
         btn.classList.add("selected");
-        btn.style.borderColor = "#ff3b3b"; // highlight matches triangle color
+        btn.style.borderColor = "#ff3b3b";
     }
 
-    // Bouncy effect
     const btn = document.getElementById(which + "Triangle");
     btn.style.transform = "translateY(3px)";
     setTimeout(() => btn.style.transform = "translateY(0px)", 150);
@@ -488,11 +503,15 @@ function drawBoard() {
             const sq = document.createElement("div");
             sq.className = "square " + ((r+c)%2===0 ? "white":"black");
             sq.dataset.key = r+","+c;
+            sq.style.border = "1px solid #222";
 
             sq.addEventListener("pointerdown", e => handleTap(e, sq));
 
             const letter = document.createElement("div");
             letter.className = "letter";
+            letter.style.color = "#d81f1f";
+            letter.style.fontFamily = '"Comic Sans MS","Segoe Script","Bradley Hand",cursive';
+            letter.style.fontSize = "26px";
             sq.appendChild(letter);
 
             board.appendChild(sq);
@@ -540,12 +559,12 @@ function handleTriangleTap(sq) {
 
     if (!firstSquare) {
         firstSquare = { r, c, key };
-        highlightTriangleSquare(sq); // highlight first square in light pink
+        highlightTriangleSquare(sq);
         return;
     }
 
     const secondSquare = { r, c };
-    highlightTriangleSquare(sq); // highlight second square in light pink
+    highlightTriangleSquare(sq);
     highlightTriangleSquare(document.querySelector(`[data-key='${firstSquare.key}']`));
 
     processTriangleCount(firstSquare, secondSquare);
@@ -553,7 +572,6 @@ function handleTriangleTap(sq) {
     triangleMode = false;
     firstSquare = null;
 
-    // Keep highlight on triangle after calculation
     const triangleEl = document.getElementById(triangleColor + "Triangle");
     if(triangleEl) triangleEl.classList.add("selected");
 }
@@ -565,7 +583,8 @@ function highlightTriangleSquare(sq) {
     if (highlights[key]) highlights[key].remove();
     const h = document.createElement("div");
     h.className = "highlight";
-    h.style.background = "#ffb6c1"; // light pink for triangle highlights
+    h.style.background = "#ffb6c1";
+    h.style.opacity = "0.45";
     sq.appendChild(h);
     highlights[key] = h;
 }
@@ -585,21 +604,16 @@ function processTriangleCount(first, second) {
     let index = cycle.indexOf(letter);
     let steps = 0;
 
-    if (first.r === second.r) {
-        steps = Math.abs(second.c - first.c);
-    } else if (first.c === second.c) {
-        steps = Math.abs(second.r - first.r);
-    } else {
+    if (first.r === second.r) steps = Math.abs(second.c - first.c);
+    else if (first.c === second.c) steps = Math.abs(second.r - first.r);
+    else {
         resultEl.textContent = "X";
         return;
     }
 
-    for(let i=0; i<steps; i++) {
-        index = (index+1) % 3;
-    }
+    for(let i=0;i<steps;i++) index = (index+1)%3;
 
-    const finalLetter = cycle[index];
-    resultEl.textContent = finalLetter;
+    resultEl.textContent = cycle[index];
 }
 
 /* ---------- HIGHLIGHT ---------- */
@@ -612,6 +626,7 @@ function toggleHighlight(sq) {
         const h = document.createElement("div");
         h.className = "highlight";
         h.style.background = currentColor;
+        h.style.opacity = "0.45";
         sq.appendChild(h);
         highlights[key] = h;
     }
